@@ -1,0 +1,218 @@
+.login-container {
+  min-height: 100vh;
+  background: url('\image.png') no-repeat center center fixed;
+  background-size: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* Container do formulário */
+.login-form-container {
+  width: 100%;
+  max-width: 450px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 3rem;
+  border-radius: 15px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Logo */
+.login-logo {
+  max-height: 80px;
+  display: block;
+  margin: 0 auto 1.5rem auto;
+}
+
+/* Títulos */
+.login-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.login-subtitle {
+  color: #6c757d;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+/* Credenciais de teste */
+.test-credentials {
+  background: rgba(248, 249, 250, 0.9);
+  border: 1px solid rgba(82, 77, 77, 0.2);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+}
+
+.test-title {
+  display: block;
+  margin-bottom: 1rem;
+  color: #2B2522;
+  text-align: center;
+  font-weight: 600;
+}
+
+.test-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.test-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  border: 1px solid #BC1F1B;
+  background: rgba(188, 31, 27, 0.1);
+  color: #BC1F1B;
+  transition: all 0.3s ease;
+}
+
+.test-btn:hover {
+  background: #BC1F1B;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Formulário */
+.login-form {
+  width: 100%;
+}
+
+/* Campos */
+.form-floating {
+  margin-bottom: 1.5rem;
+}
+
+.form-control {
+  height: 55px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  padding: 1rem 0.75rem;
+  font-size: 1rem;
+}
+
+.form-control:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.25rem rgba(188, 31, 27, 0.25);
+}
+
+.form-label {
+  color: #6c757d;
+}
+
+/* Campo de senha */
+.password-field {
+  position: relative;
+}
+
+.password-input {
+  padding-right: 50px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  font-size: 0.7rem;
+  z-index: 5;
+  padding: 0.5rem;
+}
+
+.password-toggle:hover {
+  color: var(--primary) !important;
+}
+
+/* Botão de login */
+.login-button {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  height: 50px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(188, 31, 27, 0.3);
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  border-color: var(--primary) ;
+  transition: all 0.3s ease; /* animação suave */
+}
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary:focus-visible {
+    background-color: #9A1A18 !important; /* cor escura */
+    border-color: #9A1A18 !important;
+    outline: none; /* remove a borda azul */
+}
+
+
+/* Link esqueci senha */
+.forgot-link {
+  color: #6c757d;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.forgot-link:hover {
+  color: var(--primary);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 15px;
+  }
+  
+  .login-form-container {
+    padding: 2rem 1.5rem;
+    margin: 0 10px;
+  }
+  
+  .login-title {
+    font-size: 1.75rem;
+  }
+  
+  .test-buttons {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .test-btn {
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+  }
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-form-container {
+  animation: fadeIn 0.6s ease-out;
+}
