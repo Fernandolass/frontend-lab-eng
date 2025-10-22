@@ -12,7 +12,7 @@ yarn-error.log*
 
 # Se usar npm, mantenha o package-lock.json versionado
 # Se usar yarn, ignore abaixo
-# package-lock.json
+package-lock.json
 
 # React environment files
 .env.local
