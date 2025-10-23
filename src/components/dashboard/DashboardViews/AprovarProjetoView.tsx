@@ -1,17 +1,99 @@
-import React, { useState } from 'react';
-import { projetosDetalhes, ProjetoDetalhes, Ambiente, Material } from '../../../data/mockData';
+import React, { useState, useEffect } from "react";
+import {
+  getProjetoDetalhes,
+  aprovarMaterial,
+  reprovarMaterial,
+  apiFetch,
+} from "../../../data/api";
 
 interface AprovarProjetoViewProps {
   projetoId: number;
   onBack: () => void;
 }
 
-const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({ projetoId, onBack }) => {
-  const [observacoesTemp, setObservacoesTemp] = useState<{[key: string]: string}>({});
-  const [ambientesContraidos, setAmbientesContraidos] = useState<{[key: number]: boolean}>({});
-  const [projetoData, setProjetoData] = useState<ProjetoDetalhes | undefined>(
-    projetosDetalhes.find((p: ProjetoDetalhes) => p.id === projetoId)
-  );
+interface Material {
+  id: number;
+  item_label: string;
+  descricao: string;
+  status: string;
+  motivo?: string;
+  aprovador_email?: string;
+  data_aprovacao?: string;
+}
+
+interface Ambiente {
+  id: number;
+  nome_do_ambiente: string;
+  materials: Material[];
+}
+
+interface ProjetoDetalhes {
+  id: number;
+  nome_do_projeto: string;
+  responsavel_nome: string;
+  data_criacao: string;
+  status: string;
+  ambientes: Ambiente[];
+}
+
+const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
+  projetoId,
+  onBack,
+}) => {
+  const [projetoData, setProjetoData] = useState<ProjetoDetalhes | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [observacoesTemp, setObservacoesTemp] = useState<{ [key: string]: string }>({});
+  const [ambientesContraidos, setAmbientesContraidos] = useState<{ [key: number]: boolean }>({});
+
+  // 🔹 Buscar projeto do backend
+  useEffect(() => {
+    const carregarProjeto = async () => {
+      try {
+        const data = await getProjetoDetalhes(projetoId);
+        setProjetoData(data);
+      } catch (e: any) {
+        console.error("Erro ao buscar projeto:", e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    carregarProjeto();
+  }, [projetoId]);
+
+  // 🔹 Função auxiliar: verifica se o projeto deve ser aprovado ou reprovado
+  const verificarStatusProjeto = async (dadosProjeto: ProjetoDetalhes) => {
+    const todosMateriais = dadosProjeto.ambientes.flatMap((a) => a.materials);
+    const pendentes = todosMateriais.filter((m) => m.status === "PENDENTE").length;
+    const reprovados = todosMateriais.filter((m) => m.status === "REPROVADO").length;
+
+    // se não há pendentes, definimos o status final
+    if (pendentes === 0) {
+      try {
+        if (reprovados > 0) {
+          await apiFetch(`/api/projetos/${projetoId}/reprovar/`, { method: "POST" });
+          setProjetoData((prev) => (prev ? { ...prev, status: "REPROVADO" } : prev));
+          alert("❌ Projeto reprovado automaticamente (há itens reprovados).");
+        } else {
+          await apiFetch(`/api/projetos/${projetoId}/aprovar/`, { method: "POST" });
+          setProjetoData((prev) => (prev ? { ...prev, status: "APROVADO" } : prev));
+          alert("✅ Projeto aprovado automaticamente (todos os itens aprovados).");
+        }
+      } catch (err) {
+        console.error("Erro ao atualizar status do projeto:", err);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="content-header">
+        <button className="btn btn-secondary me-3" onClick={onBack}>
+          ← Voltar
+        </button>
+        <h1>Carregando projeto...</h1>
+      </div>
+    );
+  }
 
   if (!projetoData) {
     return (
@@ -26,109 +108,121 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({ projetoId, onBa
     );
   }
 
+  // ✅ Aprovar material individual
+  const handleAprovarMaterial = async (ambienteId: number, materialId: number) => {
+    try {
+      await aprovarMaterial(materialId);
+
+      setProjetoData((prev) => {
+        if (!prev) return prev;
+        const atualizado = {
+          ...prev,
+          ambientes: prev.ambientes.map((ambiente) =>
+            ambiente.id === ambienteId
+              ? {
+                  ...ambiente,
+                  materials: ambiente.materials.map((m) =>
+                    m.id === materialId
+                      ? {
+                          ...m,
+                          status: "APROVADO",
+                          data_aprovacao: new Date().toISOString(),
+                        }
+                      : m
+                  ),
+                }
+              : ambiente
+          ),
+        };
+        verificarStatusProjeto(atualizado);
+        return atualizado;
+      });
+
+      setObservacoesTemp((prev) => {
+        const novo = { ...prev };
+        delete novo[materialId];
+        return novo;
+      });
+
+      console.log("✅ Material aprovado:", { ambienteId, materialId });
+    } catch (error: any) {
+      alert("Erro ao aprovar material: " + error.message);
+    }
+  };
+
+  // ❌ Reprovar material individual
+  const handleReprovarMaterial = async (ambienteId: number, materialId: number) => {
+    const motivo =
+      observacoesTemp[materialId] || "Item reprovado sem observações específicas";
+
+    try {
+      await reprovarMaterial(materialId, motivo);
+
+      setProjetoData((prev) => {
+        if (!prev) return prev;
+        const atualizado = {
+          ...prev,
+          ambientes: prev.ambientes.map((ambiente) =>
+            ambiente.id === ambienteId
+              ? {
+                  ...ambiente,
+                  materials: ambiente.materials.map((m) =>
+                    m.id === materialId
+                      ? {
+                          ...m,
+                          status: "REPROVADO",
+                          motivo,
+                          data_aprovacao: new Date().toISOString(),
+                        }
+                      : m
+                  ),
+                }
+              : ambiente
+          ),
+        };
+        verificarStatusProjeto(atualizado);
+        return atualizado;
+      });
+
+      setObservacoesTemp((prev) => {
+        const novo = { ...prev };
+        delete novo[materialId];
+        return novo;
+      });
+
+      console.log("❌ Material reprovado:", { ambienteId, materialId, motivo });
+    } catch (error: any) {
+      alert("Erro ao reprovar material: " + error.message);
+    }
+  };
+
+  const handleSalvarObservacao = (materialId: number, observacao: string) => {
+    setObservacoesTemp((prev) => ({
+      ...prev,
+      [materialId]: observacao,
+    }));
+  };
+
   const toggleAmbiente = (ambienteId: number) => {
-    setAmbientesContraidos(prev => ({
+    setAmbientesContraidos((prev) => ({
       ...prev,
-      [ambienteId]: !prev[ambienteId]
+      [ambienteId]: !prev[ambienteId],
     }));
   };
 
-  const handleAprovarMaterial = (ambienteId: number, materialId: string) => {
-    setProjetoData(prev => {
-      if (!prev) return prev;
-      
-      return {
-        ...prev,
-        ambientes: prev.ambientes.map(ambiente => 
-          ambiente.id === ambienteId 
-            ? {
-                ...ambiente,
-                materiais: ambiente.materiais.map(material =>
-                  material.id === materialId
-                    ? { 
-                        ...material, 
-                        status: 'aprovado',
-                        dataAprovacao: new Date().toLocaleDateString('pt-BR'),
-                        aprovador: 'Usuário Atual',
-                        observacoes: observacoesTemp[materialId] || material.observacoes
-                      }
-                    : material
-                )
-              }
-            : ambiente
-        )
-      };
-    });
-
-    setObservacoesTemp(prev => {
-      const newObs = { ...prev };
-      delete newObs[materialId];
-      return newObs;
-    });
-
-    console.log('Material aprovado:', { ambienteId, materialId });
-  };
-
-  const handleReprovarMaterial = (ambienteId: number, materialId: string) => {
-    const observacao = observacoesTemp[materialId] || 'Item reprovado sem observações específicas';
-    
-    setProjetoData(prev => {
-      if (!prev) return prev;
-      
-      return {
-        ...prev,
-        ambientes: prev.ambientes.map(ambiente => 
-          ambiente.id === ambienteId 
-            ? {
-                ...ambiente,
-                materiais: ambiente.materiais.map(material =>
-                  material.id === materialId
-                    ? { 
-                        ...material, 
-                        status: 'reprovado',
-                        motivo: observacao,
-                        dataAprovacao: new Date().toLocaleDateString('pt-BR'),
-                        aprovador: 'Usuário Atual',
-                        observacoes: observacao
-                      }
-                    : material
-                )
-              }
-            : ambiente
-        )
-      };
-    });
-
-    setObservacoesTemp(prev => {
-      const newObs = { ...prev };
-      delete newObs[materialId];
-      return newObs;
-    });
-
-    console.log('Material reprovado:', { ambienteId, materialId, observacao });
-  };
-
-  const handleSalvarObservacao = (materialId: string, observacao: string) => {
-    setObservacoesTemp(prev => ({
-      ...prev,
-      [materialId]: observacao
-    }));
-  };
-
-  const contarMateriaisPorStatus = (status: Material['status']): number => {
+  const contarMateriaisPorStatus = (status: string): number => {
     return projetoData.ambientes.reduce((total, ambiente) => {
-      return total + ambiente.materiais.filter(material => material.status === status).length;
+      return total + ambiente.materials.filter((m) => m.status === status).length;
     }, 0);
   };
 
   const materiaisPendentes = projetoData.ambientes.reduce((total, ambiente) => {
-    return total + ambiente.materiais.filter(material => material.status === 'pendente').length;
+    return total + ambiente.materials.filter((m) => m.status === "PENDENTE").length;
   }, 0);
 
-
   const toggleTodosAmbientes = (expandir: boolean) => {
-    const novoEstado: {[key: number]: boolean} = {};
-    projetoData.ambientes.forEach(ambiente => {
+    const novoEstado: { [key: number]: boolean } = {};
+    projetoData.ambientes.forEach((ambiente) => {
       novoEstado[ambiente.id] = !expandir;
     });
     setAmbientesContraidos(novoEstado);
@@ -143,34 +237,55 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({ projetoId, onBa
             ↩ Voltar
           </button>
           <div>
-            <h1 className="mb-1">{projetoData.nome}</h1>
+            <h1 className="mb-1">{projetoData.nome_do_projeto}</h1>
             <div className="text-muted">
-              <div>Responsável: {projetoData.responsavel}</div>
-              <div>Data: {projetoData.dataCriacao}</div>
+              <div>Responsável: {projetoData.responsavel_nome}</div>
+              <div>
+                Data de Criação:{" "}
+                {new Date(projetoData.data_criacao).toLocaleDateString("pt-BR")}
+              </div>
+              <div>
+                <strong>Status atual:</strong>{" "}
+                <span
+                  className={`badge ${
+                    projetoData.status === "APROVADO"
+                      ? "bg-success"
+                      : projetoData.status === "REPROVADO"
+                      ? "bg-danger"
+                      : "bg-secondary"
+                  }`}
+                >
+                  {projetoData.status || "PENDENTE"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Resumo do Projeto */}
+      {/* Resumo */}
       <div className="row mb-4">
         <div className="col-md-12">
           <div className="project-summary p-3 bg-light rounded">
             <div className="row text-center">
               <div className="col-md-3">
-                <div className="fs-4 fw-bold text">{materiaisPendentes}</div>
+                <div className="fs-4 fw-bold">{materiaisPendentes}</div>
                 <div className="text-muted">Pendentes</div>
               </div>
               <div className="col-md-3">
-                <div className="fs-4 fw-bold text">{contarMateriaisPorStatus('aprovado')}</div>
+                <div className="fs-4 fw-bold">
+                  {contarMateriaisPorStatus("APROVADO")}
+                </div>
                 <div className="text-muted">Aprovados</div>
               </div>
               <div className="col-md-3">
-                <div className="fs-4 fw-bold text">{contarMateriaisPorStatus('reprovado')}</div>
+                <div className="fs-4 fw-bold">
+                  {contarMateriaisPorStatus("REPROVADO")}
+                </div>
                 <div className="text-muted">Reprovados</div>
               </div>
               <div className="col-md-3">
-                <div className="fs-4 fw-bold text">{projetoData.ambientes.length}</div>
+                <div className="fs-4 fw-bold">{projetoData.ambientes.length}</div>
                 <div className="text-muted">Ambientes</div>
               </div>
             </div>
@@ -178,31 +293,11 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({ projetoId, onBa
         </div>
       </div>
 
-      {/* Controles de Expansão/Contração */}
-      <div className="row mb-3">
-        <div className="col-md-12">
-          <div className="d-flex justify-content-end gap-2">
-            <button 
-              className="btn btn-outline-secondary btn-sm"
-              onClick={() => toggleTodosAmbientes(true)}
-            >
-              Expandir
-            </button>
-            <button 
-              className="btn btn-outline-secondary btn-sm"
-              onClick={() => toggleTodosAmbientes(false)}
-            >
-              Contrair
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Checklist de Aprovação */}
+      {/* Ambientes */}
       <div className="checklist-container">
-        {projetoData.ambientes.map((ambiente: Ambiente) => {
-          const materiaisPendentesAmbiente = ambiente.materiais.filter(m => m.status === 'pendente');
-          const materiaisProcessados = ambiente.materiais.filter(m => m.status !== 'pendente');
+        {projetoData.ambientes.map((ambiente) => {
+          const pendentes = ambiente.materials.filter((m) => m.status === "PENDENTE");
+          const processados = ambiente.materials.filter((m) => m.status !== "PENDENTE");
           const isContraido = ambientesContraidos[ambiente.id];
 
           return (
@@ -210,9 +305,9 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({ projetoId, onBa
               <div className="card">
                 <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">
-                    {ambiente.nome}
+                    {ambiente.nome_do_ambiente}
                     <small className="ms-2 opacity-75">
-                      ({materiaisPendentesAmbiente.length} pendentes)
+                      ({pendentes.length} pendentes)
                     </small>
                   </h5>
                   <button
@@ -220,111 +315,95 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({ projetoId, onBa
                     onClick={() => toggleAmbiente(ambiente.id)}
                     title={isContraido ? "Expandir ambiente" : "Contrair ambiente"}
                   >
-                    {isContraido ? '➝' : '⤵'}
+                    {isContraido ? "➝" : "⤵"}
                   </button>
                 </div>
-                
+
                 {!isContraido && (
                   <div className="card-body">
                     {/* Materiais Pendentes */}
-                    {materiaisPendentesAmbiente.length > 0 && (
+                    {pendentes.length > 0 && (
                       <div className="materiais-pendentes">
-                        <h6 className="text-muted mb-3">Itens Pendentes de Aprovação</h6>
-                        {materiaisPendentesAmbiente.map((material: Material) => (
-                          <div key={material.id} className="material-item row align-items-center mb-3 p-3 border rounded">
+                        <h6 className="text-muted mb-3">
+                          Itens Pendentes de Aprovação
+                        </h6>
+                        {pendentes.map((m) => (
+                          <div
+                            key={m.id}
+                            className="material-item row align-items-center mb-3 p-3 border rounded"
+                          >
                             <div className="col-md-2">
-                              <strong>{material.nome}</strong>
+                              <strong>{m.item_label}</strong>
                             </div>
-                            
-                            <div className="col-md-3">
-                              <span className="text-muted">{material.tipo}</span>
-                            </div>
-                            
                             <div className="col-md-4">
                               <textarea
                                 className="form-control form-control-sm"
-                                placeholder="Digite suas observações sobre este item..."
-                                value={observacoesTemp[material.id] || ''}
-                                onChange={(e) => handleSalvarObservacao(material.id, e.target.value)}
+                                placeholder="Digite observações (opcional)..."
+                                value={observacoesTemp[m.id] || ""}
+                                onChange={(e) =>
+                                  handleSalvarObservacao(m.id, e.target.value)
+                                }
                                 rows={2}
                               />
-                              <small className="text-muted">
-                                Observações são obrigatórias para aprovação/reprovação
-                              </small>
                             </div>
-                            
-                            <div className="col-md-3">
-                              <div className="d-flex gap-2 justify-content-end">
-                                <button
-                                  className="btn btn-success btn-sm"
-                                  onClick={() => handleAprovarMaterial(ambiente.id, material.id)}
-                                  disabled={!observacoesTemp[material.id] && !material.observacoes}
-                                  title={!observacoesTemp[material.id] && !material.observacoes ? "Adicione uma observação antes de aprovar" : "Aprovar este item"}
-                                >
-                                  Aprovar
-                                </button>
-                                <button
-                                  className="btn btn-danger btn-sm"
-                                  onClick={() => handleReprovarMaterial(ambiente.id, material.id)}
-                                  disabled={!observacoesTemp[material.id]}
-                                  title={!observacoesTemp[material.id] ? "Adicione uma observação antes de reprovar" : "Reprovar este item"}
-                                >
-                                  Reprovar
-                                </button>
-                              </div>
+                            <div className="col-md-3 d-flex gap-2 justify-content-end">
+                              <button
+                                className="btn btn-success btn-sm"
+                                onClick={() => handleAprovarMaterial(ambiente.id, m.id)}
+                              >
+                                Aprovar
+                              </button>
+                              <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => handleReprovarMaterial(ambiente.id, m.id)}
+                              >
+                                Reprovar
+                              </button>
                             </div>
                           </div>
                         ))}
                       </div>
                     )}
 
-                    {/* Materiais Já Processados */}
-                    {materiaisProcessados.length > 0 && (
+                    {/* Materiais processados */}
+                    {processados.length > 0 && (
                       <div className="materiais-processados mt-4">
                         <h6 className="text-success mb-3">Itens Já Processados</h6>
-                        {materiaisProcessados.map((material: Material) => (
-                          <div key={material.id} className={`material-item row align-items-center mb-2 p-2 rounded ${
-                            material.status === 'aprovado' ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10'
-                          }`}>
-                            <div className="col-md-2">
-                              <strong>{material.nome}</strong>
-                            </div>
-                            
+                        {processados.map((m) => (
+                          <div
+                            key={m.id}
+                            className={`material-item row align-items-center mb-2 p-2 rounded ${
+                              m.status === "APROVADO"
+                                ? "bg-success bg-opacity-10"
+                                : "bg-danger bg-opacity-10"
+                            }`}
+                          >
                             <div className="col-md-3">
-                              <span className="text-muted">{material.tipo}</span>
+                              <strong>{m.item_label}</strong>
                             </div>
-                            
-                            <div className="col-md-4">
-                              {material.observacoes && (
-                                <div className="small">
-                                  <strong>Observações:</strong> {material.observacoes}
-                                </div>
-                              )}
-                              {material.motivo && material.status === 'reprovado' && (
-                                <div className="small text-danger">
-                                  <strong>Motivo:</strong> {material.motivo}
+                            <div className="col-md-6 small">
+                              {m.motivo && m.status === "REPROVADO" && (
+                                <div className="text-danger">
+                                  <strong>Motivo:</strong> {m.motivo}
                                 </div>
                               )}
                             </div>
-                            
                             <div className="col-md-3">
-                              <span className={`badge ${material.status === 'aprovado' ? 'bg-success' : 'bg-danger'}`}>
-                                {material.status === 'aprovado' ? 'Aprovado' : 'Reprovado'}
+                              <span
+                                className={`badge ${
+                                  m.status === "APROVADO" ? "bg-success" : "bg-danger"
+                                }`}
+                              >
+                                {m.status}
                               </span>
-                              {material.dataAprovacao && (
+                              {m.data_aprovacao && (
                                 <div className="small text-muted">
-                                  Em {material.dataAprovacao}
+                                  {new Date(m.data_aprovacao).toLocaleDateString("pt-BR")}
                                 </div>
                               )}
                             </div>
                           </div>
                         ))}
-                      </div>
-                    )}
-
-                    {materiaisPendentesAmbiente.length === 0 && materiaisProcessados.length === 0 && (
-                      <div className="text-center text-muted py-3">
-                        Nenhum material cadastrado para este ambiente.
                       </div>
                     )}
                   </div>
@@ -338,24 +417,10 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({ projetoId, onBa
       {/* Footer */}
       <div className="row mt-4">
         <div className="col-md-12">
-          <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded">
-            <div>
-              {}
-            </div>
-            <div>
-              <button 
-                className="btn btn-primary me-2"
-                onClick={onBack}
-              >
-                Finalizar
-              </button>
-              <button 
-                className="btn btn-secondary"
-                onClick={onBack}
-              >
-                Voltar
-              </button>
-            </div>
+          <div className="d-flex justify-content-end align-items-center p-3 bg-light rounded">
+            <button className="btn btn-secondary" onClick={onBack}>
+              Voltar
+            </button>
           </div>
         </div>
       </div>

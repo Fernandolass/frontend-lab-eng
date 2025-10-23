@@ -77,3 +77,20 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
   const ct = res.headers.get("content-type") || "";
   return ct.includes("application/json") ? res.json() : res.text();
 }
+
+export async function getProjetoDetalhes(id: number) {
+  return apiFetch(`/api/projetos/${id}/`);
+}
+
+export async function aprovarMaterial(materialId: number) {
+  return apiFetch(`/api/materiais/${materialId}/aprovar/`, {
+    method: "POST",
+  });
+}
+
+export async function reprovarMaterial(materialId: number, motivo: string) {
+  return apiFetch(`/api/materiais/${materialId}/reprovar/`, {
+    method: "POST",
+    body: JSON.stringify({ motivo }),
+  });
+}
