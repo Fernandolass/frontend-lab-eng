@@ -1,56 +1,62 @@
-// src/components/dashboard/DashboardViews/LogsView.tsx
-import React from 'react';
+import React, { useEffect, useState } from "react";
+import { apiFetch } from "../../../data/api";
+
+interface Log {
+  id: number;
+  usuario_email: string;
+  acao: string;
+  projeto_nome: string;
+  motivo?: string;
+  data_hora: string;
+}
 
 const LogsView: React.FC = () => {
-  const logsData = [
-    {
-    id: 1,
-    usuario: 'Fernando Nascimento - Gerente',
-    acao: 'Aprovado',
-    projeto: 'Condomínio A - Torre A',
-    motivo: '',
-    dataHora: '15/03/2024 14:30'
-  },
-  {
-    id: 2,
-    usuario: 'Kayky Lima - Atendente',
-    acao: 'Aprovado',
-    projeto: 'Condomínio A - Área Comum',
-    motivo: '',
-    dataHora: '20/03/2024 16:20'
-  },
-  {
-    id: 3,
-    usuario: 'Carlos Diego - Atendente',
-    acao: 'Reprovado',
-    projeto: 'Residencial B',
-    motivo: 'Mármore importado não aprovado',
-    dataHora: '14/03/2024 11:20'
-  },
-  {
-    id: 4,
-    usuario: 'Carlos Diego - Atendente',
-    acao: 'Pendente',
-    projeto: 'Edifício Commercial',
-    motivo: 'Aguardando aprovação dos materiais',
-    dataHora: '26/03/2024 10:15'
-  },
-  {
-    id: 5,
-    usuario: 'Fabiano Vidal - Super Admin',
-    acao: 'Pendente',
-    projeto: 'Condomínio Residencial Premium',
-    motivo: 'Aguardando aprovação do piso laminado',
-    dataHora: '29/03/2024 16:45'
-  }
-  ];
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [erro, setErro] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState<boolean>(true);
+
+  useEffect(() => {
+    const carregarLogs = async () => {
+      try {
+        const data = await apiFetch("/api/logs/");
+        setLogs(data);
+      } catch (e: any) {
+        setErro(e.message || "Erro ao buscar logs");
+      } finally {
+        setCarregando(false);
+      }
+    };
+    carregarLogs();
+  }, []);
+
+  if (carregando) return <p>Carregando logs...</p>;
+  if (erro) return <p style={{ color: "red" }}>Erro: {erro}</p>;
 
   return (
     <div>
       <div className="content-header">
         <h1>Logs do Sistema</h1>
         <div className="header-actions">
-          <button className="btn btn-primary">
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              const csv =
+                "ID,Usuário,Ação,Projeto,Motivo,Data e Hora\n" +
+                logs
+                  .map(
+                    (l) =>
+                      `${l.id},"${l.usuario_email}","${l.acao}","${l.projeto_nome || "-"}","${
+                        l.motivo || "-"
+                      }","${new Date(l.data_hora).toLocaleString()}"`
+                  )
+                  .join("\n");
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+              const link = document.createElement("a");
+              link.href = URL.createObjectURL(blob);
+              link.download = `logs_${new Date().toISOString().split("T")[0]}.csv`;
+              link.click();
+            }}
+          >
             Exportar Logs
           </button>
         </div>
@@ -69,24 +75,24 @@ const LogsView: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {logsData.map(log => (
-              <tr key={log.id} className="project-row">
+            {logs.map((log) => (
+              <tr key={log.id}>
                 <td>{log.id}</td>
-                <td>{log.usuario}</td>
+                <td>{log.usuario_email}</td>
                 <td>
                   <span className={`status-badge ${log.acao.toLowerCase()}`}>
                     {log.acao}
                   </span>
                 </td>
-                <td className="project-name">{log.projeto}</td>
-                <td>{log.motivo}</td>
-                <td>{log.dataHora}</td>
+                <td>{log.projeto_nome || "-"}</td>
+                <td>{log.motivo || "-"}</td>
+                <td>{new Date(log.data_hora).toLocaleString("pt-BR")}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        
-        {logsData.length === 0 && (
+
+        {logs.length === 0 && (
           <div className="no-projects-message">
             <p>Nenhum registro de log encontrado.</p>
           </div>
