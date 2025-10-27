@@ -1,21 +1,24 @@
 import React, { useEffect, useState } from "react";
+import { useParams } from 'react-router-dom';
 import { obterProjeto } from "../../../data/projects";
 
 interface DetalhesProjetoViewProps {
-  projetoId: number;
   onBack: () => void;
 }
 
-const DetalhesProjetoView: React.FC<DetalhesProjetoViewProps> = ({ projetoId, onBack }) => {
+const DetalhesProjetoView: React.FC<DetalhesProjetoViewProps> = ({ onBack }) => {
+  const { projetoId } = useParams<{ projetoId: string }>();
   const [projeto, setProjeto] = useState<any>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     const carregar = async () => {
+      if (!projetoId) return;
+      
       try {
         setCarregando(true);
-        const data = await obterProjeto(projetoId);
+        const data = await obterProjeto(parseInt(projetoId));
         setProjeto(data);
       } catch (err) {
         console.error("Erro ao carregar projeto:", err);
