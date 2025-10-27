@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface InicioViewProps {
-  onViewDetails: () => void;
+  onViewDetails?: (id: number) => void;
 }
 
 const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
@@ -12,7 +12,7 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
     total: 12
   };
 
-  const monthlyData = [10, 8, 9, 12, 14, 12];
+  const monthlyData = [10, 8, 9, 12, 14, 12, 15, 19, 24];
 
   return (
     <div className="inicio-container">
@@ -110,7 +110,7 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
             <div className="card-header">
               <h5 className="card-title mb-0">
                 <i className="fas fa-chart-bar me-2 text-primary"></i>
-                Projetos por Mês (Últimos 6 meses)
+                Projetos por Mês (Últimos 9 meses)
               </h5>
             </div>
             <div className="card-body">
@@ -124,7 +124,7 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
                           style={{ height: `${(value / 20) * 100}%` }}
                         ></div>
                       </div>
-                      <span className="bar-label">{['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'][index]}</span>
+                      <span className="bar-label">{['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set'][index]}</span>
                       <span className="bar-value">{value}</span>
                     </div>
                   ))}

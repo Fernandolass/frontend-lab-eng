@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from 'react-router-dom';
 import {
   getProjetoDetalhes,
   aprovarMaterial,
@@ -7,7 +8,6 @@ import {
 } from "../../../data/api";
 
 interface AprovarProjetoViewProps {
-  projetoId: number;
   onBack: () => void;
 }
 
@@ -37,9 +37,9 @@ interface ProjetoDetalhes {
 }
 
 const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
-  projetoId,
   onBack,
 }) => {
+  const { projetoId } = useParams<{ projetoId: string }>();
   const [projetoData, setProjetoData] = useState<ProjetoDetalhes | null>(null);
   const [loading, setLoading] = useState(true);
   const [observacoesTemp, setObservacoesTemp] = useState<{ [key: string]: string }>({});
@@ -48,8 +48,10 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
   // 🔹 Buscar projeto do backend
   useEffect(() => {
     const carregarProjeto = async () => {
+      if (!projetoId) return;
+      
       try {
-        const data = await getProjetoDetalhes(projetoId);
+        const data = await getProjetoDetalhes(parseInt(projetoId));
         setProjetoData(data);
       } catch (e: any) {
         console.error("Erro ao buscar projeto:", e.message);

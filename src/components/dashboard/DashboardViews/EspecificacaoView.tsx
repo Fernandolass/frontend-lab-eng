@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
+import { useParams } from 'react-router-dom';
 import { apiFetch } from "../../../data/api";
 import { obterProjeto, criarMaterial } from "../../../data/projects";
 
 interface EspecificacaoViewProps {
-  projetoId: number;
   onBack: () => void;
 }
 
 const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({
-  projetoId,
   onBack,
 }) => {
+  const { projetoId } = useParams<{ projetoId: string }>();
   const [projeto, setProjeto] = useState<any>(null);
   const [materiaisPorAmbiente, setMateriaisPorAmbiente] = useState<
     Record<number, any[]>
@@ -24,8 +24,10 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({
   // 🔹 Carrega projeto + ambientes + itens e sugestões do backend
   useEffect(() => {
     const carregar = async () => {
+      if (!projetoId) return;
+      
       try {
-        const proj = await obterProjeto(projetoId);
+        const proj = await obterProjeto(parseInt(projetoId));
         const allMaterials = await apiFetch("/api/materiais/");
 
         // Agrupar sugestões por tipo de item

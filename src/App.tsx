@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './assets/styles/custom.css';
 import { jwtDecode } from "jwt-decode";
+import { Routes, Route, Navigate } from 'react-router-dom';
+
 import Login from './components/login/Login';
 import Dashboard from './components/dashboard/Dashboard';
 
@@ -12,35 +14,30 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Verificar se já está logado ao carregar a aplicação
   useEffect(() => {
-  const token = getAccessToken();
+    const token = getAccessToken();
 
-  if (token) {
-    try {
-      const decoded: { exp: number } = jwtDecode(token);
-      const now = Date.now() / 1000;
+    if (token) {
+      try {
+        const decoded: { exp: number } = jwtDecode(token);
+        const now = Date.now() / 1000;
 
-      if (decoded.exp < now) {
-        // Token expirou
+        if (decoded.exp < now) {
+          clearTokens();
+          setIsAuthenticated(false);
+        } else {
+          setIsAuthenticated(true);
+        }
+      } catch {
         clearTokens();
         setIsAuthenticated(false);
-      } else {
-        // Token ainda válido
-        setIsAuthenticated(true);
       }
-    } catch (err) {
-      // Token inválido ou erro ao decodificar
-      clearTokens();
+    } else {
       setIsAuthenticated(false);
     }
-  } else {
-    // Nenhum token salvo
-    setIsAuthenticated(false);
-  }
 
-  setIsLoading(false);
-}, []);
+    setIsLoading(false);
+  }, []);
 
   const handleLogin = async (email: string, password: string) => {
     setIsLoading(true);
@@ -75,13 +72,34 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="App">
-      {isAuthenticated ? (
-        <Dashboard onLogout={handleLogout} />
-      ) : (
-        <Login onLogin={handleLogin} />
-      )}
-    </div>
+    <Routes>
+      {/* Rota login */}
+      <Route
+        path="/login"
+        element={
+          isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />
+        }
+      />
+
+      {/* Rota dashboard */}
+      <Route
+        path="/dashboard/*"
+        element={
+          isAuthenticated ? <Dashboard onLogout={handleLogout} /> : <Navigate to="/login" />
+        }
+      />
+
+      {/* Rota raiz redireciona */}
+      <Route
+        path="/"
+        element={
+          isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
+        }
+      />
+
+      {/* 404 simples */}
+      <Route path="*" element={<p>Página não encontrada</p>} />
+    </Routes>
   );
 };
 
