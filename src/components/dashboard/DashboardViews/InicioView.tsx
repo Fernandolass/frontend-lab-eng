@@ -105,7 +105,7 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
 
       {/* Gráfico e Ações Rápidas */}
       <div className="row mb-5">
-        <div className="col-lg-8 mb-4">
+        <div className="col-lg-12 mb-4">
           <div className="card chart-card">
             <div className="card-header">
               <h5 className="card-title mb-0">

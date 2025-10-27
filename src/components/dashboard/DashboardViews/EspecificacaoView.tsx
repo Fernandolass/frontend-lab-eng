@@ -125,7 +125,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({
 
   return (
     <div className="container mt-4">
-      <h2 className="text-center mb-5">ESPECIFICAÇÃO TÉCNICA</h2>
+      <h2 className="text-center page-title mb-5">ESPECIFICAÇÃO TÉCNICA</h2>
       <h5 className="text-muted mb-4 text-center">{projeto.nome}</h5>
 
       {projeto.ambientes.map((amb: any) => (

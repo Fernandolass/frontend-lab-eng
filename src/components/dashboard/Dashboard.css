@@ -608,13 +608,18 @@ textarea.form-control {
 }
 
 .btn-primary {
-  background: var(--primary-color);
+  background-color: var(--primary);
+  border-color: var(--primary) ;
+  transition: all 0.3s ease; /* animação suave */
 }
-
-.btn-primary:hover {
-  background: var(--primary-hover);
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary:focus-visible {
+    background-color: #9A1A18 !important; /* cor escura */
+    border-color: #9A1A18 !important;
+    outline: none; /* remove a borda azul */
 }
-
 .btn-success {
   background: var(--success-color);
 }
