@@ -18,6 +18,7 @@ export function clearTokens() {
 
 export async function login(email: string, password: string) {
   // seu USERNAME_FIELD é 'email', então o payload é { email, password }
+  console.log("API URL em build:", process.env.REACT_APP_API_URL);
   const r = await fetch(`${BASE}/api/token/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
