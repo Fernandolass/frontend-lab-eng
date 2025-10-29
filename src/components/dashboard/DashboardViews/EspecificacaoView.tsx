@@ -16,60 +16,65 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
   const [itensDisponiveis, setItensDisponiveis] = useState<Array<{ key: string; label: string }>>([]);
 
   // 🔹 Carrega projeto e monta dados locais
-useEffect(() => {
-  const carregar = async () => {
-    if (!projetoId) return;
+  useEffect(() => {
+    const carregar = async () => {
+      if (!projetoId) return;
 
-    try {
-      const proj = await obterProjeto(parseInt(projetoId));
+      try {
+        const proj = await obterProjeto(parseInt(projetoId));
 
-      // 🔹 Garante que todos os ambientes tenham seus materiais carregados
-      const materiais: Record<number, any[]> = {};
-      proj.ambientes.forEach((amb: any) => {
-        materiais[amb.id] = amb.materials || [];
-      });
-
-      // 🔹 Monta lista de itens e sugestões mesmo se descrições estiverem vazias
-      const agrupado: Record<string, Set<string>> = {};
-      const itensUnicos: Record<string, string> = {};
-
-      proj.ambientes.forEach((amb: any) => {
-        (amb.materials || []).forEach((m: any) => {
-          const tipo = m.item?.toUpperCase()?.trim();
-          if (!tipo) return;
-          itensUnicos[tipo] = m.item_label || tipo;
-          if (!agrupado[tipo]) agrupado[tipo] = new Set();
-          if (m.descricao) agrupado[tipo].add(m.descricao.trim());
+        // 🔹 Garante que todos os ambientes tenham seus materiais carregados
+        const materiais: Record<number, any[]> = {};
+        proj.ambientes.forEach((amb: any) => {
+          materiais[amb.id] = amb.materials || [];
         });
-      });
 
-      // 🔹 Mesmo sem descrições, adiciona a chave do item como base
-      const limpo: Record<string, string[]> = {};
-      Object.keys(agrupado).forEach((key) => {
-        limpo[key] = Array.from(agrupado[key]);
-      });
+        // 🔹 Monta lista de itens e sugestões — agora por ambiente + item
+        const agrupado: Record<string, Set<string>> = {};
+        const itensUnicos: Record<string, string> = {};
 
-      const itensArr = Object.keys(itensUnicos).map((k) => ({
-        key: k,
-        label: itensUnicos[k],
-      }));
+        proj.ambientes.forEach((amb: any) => {
+          (amb.materials || []).forEach((m: any) => {
+            const itemKey = m.item?.toUpperCase()?.trim();
+            if (!itemKey) return;
 
-      // 🔹 Atualiza estados
-      setProjeto(proj);
-      setMateriaisPorAmbiente(materiais);
-      setSugestoes(limpo);
-      setItensDisponiveis(itensArr);
+            // 🔑 chave única ambiente + item
+            const chave = `${amb.nome_do_ambiente?.toUpperCase()}__${itemKey}`;
 
-    } catch (err) {
-      console.error("Erro ao carregar especificação:", err);
-      alert("Erro ao carregar dados da especificação técnica.");
-    } finally {
-      setLoading(false);
-    }
-  };
+            itensUnicos[chave] = `${amb.nome_do_ambiente} - ${m.item_label || itemKey}`;
+            if (!agrupado[chave]) agrupado[chave] = new Set();
 
-  carregar();
-}, [projetoId]);
+            if (m.descricao) agrupado[chave].add(m.descricao.trim());
+          });
+        });
+
+        // 🔹 Converte Set → Array
+        const limpo: Record<string, string[]> = {};
+        Object.keys(agrupado).forEach((key) => {
+          limpo[key] = Array.from(agrupado[key]);
+        });
+
+        const itensArr = Object.keys(itensUnicos).map((k) => ({
+          key: k,
+          label: itensUnicos[k],
+        }));
+
+        // 🔹 Atualiza estados
+        setProjeto(proj);
+        setMateriaisPorAmbiente(materiais);
+        setSugestoes(limpo);
+        setItensDisponiveis(itensArr);
+
+      } catch (err) {
+        console.error("Erro ao carregar especificação:", err);
+        alert("Erro ao carregar dados da especificação técnica.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregar();
+  }, [projetoId]);
 
   // 🔹 Atualiza descrição existente (PATCH)
   const handleChange = async (ambienteId: number, materialId: number, value: string) => {
@@ -131,42 +136,46 @@ useEffect(() => {
               </tr>
             </thead>
             <tbody>
-              {(materiaisPorAmbiente[amb.id] || []).map((m) => (
-                <tr key={m.id}>
-                  <td className="fw-semibold">{m.item_label}</td>
-                  <td>
-                    <select
-                      className="form-select"
-                      value={m.descricao || ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "_outro") {
-                          handleChange(amb.id, m.id, "");
-                        } else {
-                          handleChange(amb.id, m.id, val);
-                        }
-                      }}
-                    >
-                      <option value="">Selecione...</option>
-                      {(sugestoes[m.item?.toUpperCase()] || []).map((desc) => (
-                        <option key={desc} value={desc}>
-                          {desc}
-                        </option>
-                      ))}
-                      <option value="_outro">Outro (escrever manualmente)</option>
-                    </select>
+              {(materiaisPorAmbiente[amb.id] || []).map((m) => {
+                const chave = `${amb.nome_do_ambiente?.toUpperCase()}__${m.item?.toUpperCase()}`;
+                const opcoes = sugestoes[chave] || [];
+                return (
+                  <tr key={m.id}>
+                    <td className="fw-semibold">{m.item_label}</td>
+                    <td>
+                      <select
+                        className="form-select"
+                        value={m.descricao || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "_outro") {
+                            handleChange(amb.id, m.id, "");
+                          } else {
+                            handleChange(amb.id, m.id, val);
+                          }
+                        }}
+                      >
+                        <option value="">Selecione...</option>
+                        {opcoes.map((desc) => (
+                          <option key={desc} value={desc}>
+                            {desc}
+                          </option>
+                        ))}
+                        <option value="_outro">Outro (escrever manualmente)</option>
+                      </select>
 
-                    {m.descricao === "" && (
-                      <input
-                        type="text"
-                        className="form-control mt-2"
-                        placeholder={`Descreva o ${m.item_label.toLowerCase()}...`}
-                        onBlur={(e) => handleChange(amb.id, m.id, e.target.value)}
-                      />
-                    )}
-                  </td>
-                </tr>
-              ))}
+                      {m.descricao === "" && (
+                        <input
+                          type="text"
+                          className="form-control mt-2"
+                          placeholder={`Descreva o ${m.item_label.toLowerCase()}...`}
+                          onBlur={(e) => handleChange(amb.id, m.id, e.target.value)}
+                        />
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
