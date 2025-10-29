@@ -1,5 +1,5 @@
 import { apiFetch } from "./api";
-import type { ProjetoDetalhes, Ambiente, Material } from "./mockData"; // reaproveita suas interfaces
+import type { ProjetoDetalhes, Ambiente, Material } from "./mockData";
 
 // map status BACKEND -> FRONT
 function mapStatus(s: string): "aprovado" | "reprovado" | "pendente" {
@@ -10,12 +10,10 @@ function mapStatus(s: string): "aprovado" | "reprovado" | "pendente" {
 }
 
 function mapAmbiente(a: any): Ambiente {
-  // seu backend ainda não tem "materiais" por ambiente (são campos textuais).
-  // Vamos mapear só nome/id; o front pode continuar exibindo os textos desses campos.
   return {
     id: a.id,
     nome: a.nome_do_ambiente,
-    materiais: [] as Material[], // placeholder; você pode montar com base nos campos (piso, parede, etc.) se quiser
+    materiais: [] as Material[],
   };
 }
 
@@ -25,15 +23,38 @@ function mapProjeto(p: any): ProjetoDetalhes {
     nome: p.nome_do_projeto,
     tipoProjeto: p.tipo_do_projeto,
     dataCriacao: new Date(p.data_criacao).toLocaleDateString("pt-BR"),
-    responsavel: p.responsavel_nome || "", // você já expõe responsavel_nome no serializer
+    responsavel: p.responsavel_nome || "",
     status: mapStatus(p.status),
     ambientes: (p.ambientes || []).map(mapAmbiente),
+
+    // 🔥 adicionar esses dois
+    descricao_marcas: p.descricao_marcas || [],
+    observacoes_gerais: p.observacoes_gerais || "",
   };
 }
 
-export async function listarProjetos(): Promise<ProjetoDetalhes[]> {
-  const data = await apiFetch("/api/projetos/");
-  return (data as any[]).map(mapProjeto);
+// 🔹 agora com paginação e filtro de status
+export async function listarProjetos(
+  page: number = 1,
+  status?: "APROVADO" | "REPROVADO" | "PENDENTE"
+): Promise<{
+  results: ProjetoDetalhes[];
+  next: string | null;
+  previous: string | null;
+  count: number;
+}> {
+  const query = new URLSearchParams();
+  query.set("page", page.toString());
+  if (status) query.set("status", status);
+
+  const data = await apiFetch(`/api/projetos/?${query.toString()}`);
+
+  return {
+    results: (data.results || []).map(mapProjeto),
+    next: data.next,
+    previous: data.previous,
+    count: data.count,
+  };
 }
 
 export async function obterProjeto(id: number): Promise<ProjetoDetalhes> {
@@ -42,7 +63,7 @@ export async function obterProjeto(id: number): Promise<ProjetoDetalhes> {
 }
 
 export async function statsDashboard() {
-  return apiFetch("/api/dashboard-stats/") as Promise<{
+  return apiFetch("/api/stats/dashboard/") as Promise<{
     total_projetos: number;
     projetos_aprovados: number;
     projetos_reprovados: number;
@@ -50,15 +71,28 @@ export async function statsDashboard() {
   }>;
 }
 
+// 🔹 novo: estatísticas mensais
+export async function statsMensais() {
+  return apiFetch("/api/stats/mensais/") as Promise<
+    Array<{
+      mes: string; // exemplo: "2025-10"
+      APROVADO: number;
+      REPROVADO: number;
+      PENDENTE: number;
+    }>
+  >;
+}
+
 export async function criarProjeto(payload: {
   nome_do_projeto: string;
   tipo_do_projeto: string;
   data_entrega: string;
   descricao?: string;
+  ambientes_ids?: number[];
 }) {
   return apiFetch("/api/projetos/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" }, // 🔥 OBRIGATÓRIO
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
@@ -78,18 +112,21 @@ export async function criarAmbiente(dados: {
 
 export async function listarAmbientes() {
   const data = await apiFetch("/api/ambientes/");
-  return (data as any[]).map((a) => ({
+  return (data.results as any[]).map((a) => ({
     id: a.id,
-    nome: a.nome_do_ambiente, // <-- corrige aqui
+    nome: a.nome_do_ambiente,
     categoria: a.categoria,
     tipo: a.tipo || null,
     guia_de_cores: a.guia_de_cores || "",
+    projeto: a.projeto || null,
   }));
 }
 
 // --- Tipos de Ambiente ---
 export async function listarTiposAmbiente() {
-  return apiFetch("/api/tipos-ambiente/") as Promise<Array<{id:number; nome:string}>>;
+  return apiFetch("/api/tipos-ambiente/") as Promise<
+    Array<{ id: number; nome: string }>
+  >;
 }
 export async function criarTipoAmbiente(nome: string) {
   return apiFetch("/api/tipos-ambiente/", {
@@ -101,7 +138,9 @@ export async function criarTipoAmbiente(nome: string) {
 
 // --- Marcas ---
 export async function listarMarcas() {
-  return apiFetch("/api/marcas/") as Promise<Array<{id:number; nome:string}>>;
+  return apiFetch("/api/marcas/") as Promise<
+    Array<{ id: number; nome: string }>
+  >;
 }
 export async function criarMarca(nome: string) {
   return apiFetch("/api/marcas/", {
@@ -111,29 +150,27 @@ export async function criarMarca(nome: string) {
   });
 }
 
-// --- Materiais (itens aprováveis) ---
+// --- Materiais ---
 export async function criarMaterial(payload: {
   ambiente: number;
-  item: string;       // ex.: "PISO", "PAREDE"...
+  item: string;
   descricao?: string;
   marca?: number | null;
 }) {
   try {
-    // Tenta criar o material
     return await apiFetch("/api/materiais/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
   } catch (err: any) {
-    // Se o backend responder com o erro de unicidade, atualiza o registro existente
     if (err.message?.includes("ambiente, item")) {
-      // Busca materiais existentes no mesmo ambiente
-      const existentes = await apiFetch(`/api/materiais/?ambiente=${payload.ambiente}`);
+      const existentes = await apiFetch(
+        `/api/materiais/?ambiente=${payload.ambiente}`
+      );
       const jaExiste = existentes.find((m: any) => m.item === payload.item);
 
       if (jaExiste) {
-        // Faz PATCH no material existente (atualiza descrição e marca)
         return await apiFetch(`/api/materiais/${jaExiste.id}/`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -144,12 +181,11 @@ export async function criarMaterial(payload: {
         });
       }
     }
-    // Propaga outros erros normalmente
     throw err;
   }
 }
 
-// --- Usuários (apenas superadmin) ---
+// --- Usuários ---
 export async function criarUsuario(payload: {
   email: string;
   username: string;

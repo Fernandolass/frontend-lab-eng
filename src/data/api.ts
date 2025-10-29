@@ -1,3 +1,4 @@
+
 const BASE = (process.env.REACT_APP_API_URL || "").replace(/\/+$/, "");
 
 type Tokens = { access: string; refresh: string };
@@ -93,4 +94,12 @@ export async function reprovarMaterial(materialId: number, motivo: string) {
     method: "POST",
     body: JSON.stringify({ motivo }),
   });
+}
+
+export async function getDashboardStats() {
+  return apiFetch("/api/stats/dashboard/");
+}
+
+export async function getStatsMensais() {
+  return apiFetch("/api/stats/mensais/");
 }

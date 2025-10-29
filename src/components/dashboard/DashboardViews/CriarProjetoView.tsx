@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { listarAmbientes, criarProjeto, criarAmbiente } from "../../../data/projects";
+import {apiFetch} from "../../../data/api";
 
 interface CriarProjetoViewProps {
   onNext: (projetoId: number) => void;
@@ -51,23 +52,20 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const existentes = await apiFetch(`/api/projetos/?search=${formData.nomeProjeto}`);
+
+      if (existentes.results && existentes.results.some((p: any) => p.nome_do_projeto === formData.nomeProjeto)) {
+        alert("Já existe um projeto com esse nome!");
+        setLoading(false);
+        return;
+      }
       const projeto = await criarProjeto({
         nome_do_projeto: formData.nomeProjeto,
         tipo_do_projeto: formData.tipoProjeto,
         data_entrega: formData.dataEntrega,
         descricao: formData.descricao,
+        ambientes_ids: ambientesSelecionados,
       });
-
-      for (const ambienteId of ambientesSelecionados) {
-        const original = ambientesLista.find((a) => a.id === ambienteId);
-        if (!original) continue;
-        await criarAmbiente({
-          projeto: projeto.id,
-          nome_do_ambiente: original.nome,
-          tipo: original.tipo || null,
-          categoria: original.categoria || "PRIVATIVA",
-        });
-      }
 
       alert("Projeto criado com sucesso!");
       onNext(projeto.id);
@@ -168,3 +166,4 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
 };
 
 export default CriarProjetoView;
+

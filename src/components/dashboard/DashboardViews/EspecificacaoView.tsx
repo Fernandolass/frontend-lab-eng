@@ -22,13 +22,16 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({
   >([]);
 
   // 🔹 Carrega projeto + ambientes + itens e sugestões do backend
-  useEffect(() => {
+useEffect(() => {
     const carregar = async () => {
       if (!projetoId) return;
       
       try {
         const proj = await obterProjeto(parseInt(projetoId));
-        const allMaterials = await apiFetch("/api/materiais/");
+
+        // pega resposta paginada
+        const allMaterialsResp = await apiFetch("/api/materiais/");
+        const allMaterials = allMaterialsResp.results || [];
 
         // Agrupar sugestões por tipo de item
         const agrupado: Record<string, Set<string>> = {};
@@ -58,8 +61,8 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({
         // Carregar materiais de cada ambiente
         const materiais: Record<number, any[]> = {};
         for (const amb of proj.ambientes) {
-          const data = await apiFetch(`/api/materiais/?ambiente=${amb.id}`);
-          materiais[amb.id] = data;
+          const dataResp = await apiFetch(`/api/materiais/?ambiente=${amb.id}`);
+          materiais[amb.id] = dataResp.results || [];
         }
 
         setSugestoes(limpo);
