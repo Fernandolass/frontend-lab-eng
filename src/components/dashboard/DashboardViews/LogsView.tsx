@@ -10,23 +10,50 @@ interface Log {
   data_hora: string;
 }
 
+interface PaginatedLogs {
+  results: Log[];
+  next: string | null;
+  previous: string | null;
+  count: number;
+}
+
 const LogsView: React.FC = () => {
   const [logs, setLogs] = useState<Log[]>([]);
+  const [next, setNext] = useState<string | null>(null);
+  const [previous, setPrevious] = useState<string | null>(null);
+  const [count, setCount] = useState<number>(0);
+  const [page, setPage] = useState<number>(1);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState<boolean>(true);
 
-  useEffect(() => {
-    const carregarLogs = async () => {
-      try {
-        const data = await apiFetch("/api/logs/");
+  const carregarLogs = async (page: number = 1) => {
+    setCarregando(true);
+    try {
+      const data = (await apiFetch(`/api/logs/?page=${page}`)) as PaginatedLogs;
+
+      if (Array.isArray(data)) {
+        // fallback se backend não tiver paginação
         setLogs(data);
-      } catch (e: any) {
-        setErro(e.message || "Erro ao buscar logs");
-      } finally {
-        setCarregando(false);
+        setNext(null);
+        setPrevious(null);
+        setCount(data.length);
+      } else {
+        setLogs(data.results || []);
+        setNext(data.next);
+        setPrevious(data.previous);
+        setCount(data.count);
       }
-    };
-    carregarLogs();
+
+      setPage(page);
+    } catch (e: any) {
+      setErro(e.message || "Erro ao buscar logs");
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  useEffect(() => {
+    carregarLogs(1);
   }, []);
 
   if (carregando) return <p>Carregando logs...</p>;
@@ -45,9 +72,11 @@ const LogsView: React.FC = () => {
                 logs
                   .map(
                     (l) =>
-                      `${l.id},"${l.usuario_email}","${l.acao}","${l.projeto_nome || "-"}","${
-                        l.motivo || "-"
-                      }","${new Date(l.data_hora).toLocaleString()}"`
+                      `${l.id},"${l.usuario_email}","${l.acao}","${
+                        l.projeto_nome || "-"
+                      }","${l.motivo || "-"}","${new Date(
+                        l.data_hora
+                      ).toLocaleString()}"`
                   )
                   .join("\n");
               const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -97,6 +126,27 @@ const LogsView: React.FC = () => {
             <p>Nenhum registro de log encontrado.</p>
           </div>
         )}
+      </div>
+
+      {/* 🔹 Botões de paginação */}
+      <div className="pagination d-flex justify-content-between mt-3">
+        <button
+          className="btn btn-outline-secondary"
+          onClick={() => carregarLogs(page - 1)}
+          disabled={!previous}
+        >
+          ⬅ Anterior
+        </button>
+        <span>
+          Página {page} — Total: {count}
+        </span>
+        <button
+          className="btn btn-outline-secondary"
+          onClick={() => carregarLogs(page + 1)}
+          disabled={!next}
+        >
+          Próxima ➡
+        </button>
       </div>
     </div>
   );

@@ -372,9 +372,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
                       <div className="materiais-processados mt-4">
                         <h6 className="text-success mb-3">Itens Já Processados</h6>
                         {processados.map((m) => (
-                          <div
-                            key={m.id}
-                            className={`material-item row align-items-center mb-2 p-2 rounded ${
+                          <div key={m.id} className={`material-item row align-items-center mb-2 p-2 rounded ${
                               m.status === "APROVADO"
                                 ? "bg-success bg-opacity-10"
                                 : "bg-danger bg-opacity-10"

@@ -15,45 +15,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const location = useLocation();
   
   const [projetosMenuOpen, setProjetosMenuOpen] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [erro, setErro] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjetoDetalhes[]>([]);
 
   const userEmail = localStorage.getItem('userEmail') || 'Usuário';
   const userName = userEmail.split('@')[0];
-
-  // 🔄 Busca todos os projetos do backend
-  useEffect(() => {
-    const carregarProjetos = async () => {
-      setLoading(true);
-      try {
-        const data = await listarProjetos();
-        setProjects(data);
-        setErro(null);
-      } catch (err) {
-        console.error('Erro ao carregar projetos:', err);
-        setErro('Não foi possível carregar os projetos.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    carregarProjetos();
-  }, []);
-
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    // Fecha o menu de projetos se não estiver em uma das views de projetos
-    if (!path.includes('aprovados') && !path.includes('reprovados') && !path.includes('pendentes')) {
-      setProjetosMenuOpen(false);
-    }
-  };
-
-  const handleProjetosMenuClick = () => {
-    setProjetosMenuOpen(!projetosMenuOpen);
-    if (!projetosMenuOpen) {
-      navigate('/dashboard/aprovados');
-    }
-  };
 
   // Determina a view atual baseada na URL
   const getCurrentView = () => {
@@ -68,7 +35,48 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   };
 
   const currentView = getCurrentView();
-  
+
+  // 🔹 Busca projetos SOMENTE quando entra em uma view de projetos
+  useEffect(() => {
+    const carregarProjetos = async () => {
+      if (!['aprovados', 'reprovados', 'pendentes'].includes(currentView)) {
+        return;
+      }
+      setLoading(true);
+      try {
+        let status: "APROVADO" | "REPROVADO" | "PENDENTE" | undefined;
+        if (currentView === 'aprovados') status = "APROVADO";
+        if (currentView === 'reprovados') status = "REPROVADO";
+        if (currentView === 'pendentes') status = "PENDENTE";
+
+        const data = await listarProjetos(1, status);
+        setProjects(data.results);
+        setErro(null);
+      } catch (err) {
+        console.error('Erro ao carregar projetos:', err);
+        setErro('Não foi possível carregar os projetos.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregarProjetos();
+  }, [currentView]);
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    if (!path.includes('aprovados') && !path.includes('reprovados') && !path.includes('pendentes')) {
+      setProjetosMenuOpen(false);
+    }
+  };
+
+  const handleProjetosMenuClick = () => {
+    setProjetosMenuOpen(!projetosMenuOpen);
+    if (!projetosMenuOpen) {
+      navigate('/dashboard/aprovados');
+    }
+  };
+
   const isProjetosViewActive = 
     currentView === 'aprovados' ||
     currentView === 'reprovados' ||
