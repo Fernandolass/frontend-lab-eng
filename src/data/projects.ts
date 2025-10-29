@@ -13,9 +13,13 @@ function mapAmbiente(a: any): Ambiente {
   return {
     id: a.id,
     nome: a.nome_do_ambiente,
-    materiais: [] as Material[],
+    materiais: a.materials || [],
+    categoria: a.categoria || "",
+    tipo: a.tipo || null,
+    guia_de_cores: a.guia_de_cores || "",
   };
 }
+
 
 function mapProjeto(p: any): ProjetoDetalhes {
   return {
@@ -26,8 +30,6 @@ function mapProjeto(p: any): ProjetoDetalhes {
     responsavel: p.responsavel_nome || "",
     status: mapStatus(p.status),
     ambientes: (p.ambientes || []).map(mapAmbiente),
-
-    // 🔥 adicionar esses dois
     descricao_marcas: p.descricao_marcas || [],
     observacoes_gerais: p.observacoes_gerais || "",
   };
@@ -58,8 +60,31 @@ export async function listarProjetos(
 }
 
 export async function obterProjeto(id: number): Promise<ProjetoDetalhes> {
-  const data = await apiFetch(`/api/projetos/${id}/`);
-  return mapProjeto(data);
+  // Busca os dados básicos do projeto
+  const projeto = await apiFetch(`/api/projetos/${id}/`);
+
+  // Para cada ambiente do projeto, busca seus materiais específicos
+  const ambientesComMateriais = await Promise.all(
+    (projeto.ambientes || []).map(async (amb: any) => {
+      try {
+        const data = await apiFetch(`/api/materiais/?projeto=${id}&ambiente=${amb.id}`);
+        // Garante compatibilidade com paginação do DRF
+        const materials = Array.isArray(data.results) ? data.results : data;
+        return { ...amb, materials };
+      } catch (err) {
+        console.error(`Erro ao buscar materiais do ambiente ${amb.nome_do_ambiente}:`, err);
+        return { ...amb, materials: [] };
+      }
+    })
+  );
+
+  // Retorna o projeto completo com materiais
+  return {
+    ...projeto,
+    ambientes: ambientesComMateriais,
+    descricao_marcas: projeto.descricao_marcas || [],
+    observacoes_gerais: projeto.observacoes_gerais || "",
+  };
 }
 
 export async function statsDashboard() {
@@ -111,7 +136,7 @@ export async function criarAmbiente(dados: {
 }
 
 export async function listarAmbientes() {
-  const data = await apiFetch("/api/ambientes/");
+  const data = await apiFetch("/api/ambientes/?disponiveis=1");
   return (data.results as any[]).map((a) => ({
     id: a.id,
     nome: a.nome_do_ambiente,

@@ -19,8 +19,11 @@ export interface ProjetoDetalhes {
 
 export interface Ambiente {
   id: number;
-  nome: string; 
+  nome: string;
   materiais: Material[];
+  categoria?: string;
+  tipo?: number | null;
+  guia_de_cores?: string;
 }
 
 export interface Material {

@@ -1,4 +1,3 @@
-
 const BASE = (process.env.REACT_APP_API_URL || "").replace(/\/+$/, "");
 
 type Tokens = { access: string; refresh: string };
@@ -18,7 +17,6 @@ export function clearTokens() {
 }
 
 export async function login(email: string, password: string) {
-  // seu USERNAME_FIELD é 'email', então o payload é { email, password }
   const r = await fetch(`${BASE}/api/token/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -49,7 +47,6 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
   const token = getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  // 🔹 garante que, se o método for POST ou PATCH e não houver Content-Type, define application/json
   const method = (init.method || "GET").toUpperCase();
   if ((method === "POST" || method === "PATCH" || method === "PUT") && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -79,10 +76,27 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
   return ct.includes("application/json") ? res.json() : res.text();
 }
 
+/* ==========================================================
+   🔹 GET DETALHES DE PROJETO (com materiais filtrados por projeto)
+   ========================================================== */
 export async function getProjetoDetalhes(id: number) {
-  return apiFetch(`/api/projetos/${id}/`);
+  const projeto = await apiFetch(`/api/projetos/${id}/`);
+
+  // 🔹 Carrega os materiais de cada ambiente, filtrando por projeto
+  const ambientes = await Promise.all(
+    (projeto.ambientes || []).map(async (a: any) => {
+      const data = await apiFetch(`/api/materiais/?projeto=${id}&ambiente=${a.id}`);
+      const materials = Array.isArray(data) ? data : data.results || [];
+      return { ...a, materials };
+    })
+  );
+
+  return { ...projeto, ambientes };
 }
 
+/* ==========================================================
+   🔹 MATERIAIS
+   ========================================================== */
 export async function aprovarMaterial(materialId: number) {
   return apiFetch(`/api/materiais/${materialId}/aprovar/`, {
     method: "POST",
@@ -96,6 +110,9 @@ export async function reprovarMaterial(materialId: number, motivo: string) {
   });
 }
 
+/* ==========================================================
+   🔹 DASHBOARD / ESTATÍSTICAS
+   ========================================================== */
 export async function getDashboardStats() {
   return apiFetch("/api/stats/dashboard/");
 }
