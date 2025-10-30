@@ -149,8 +149,8 @@
 }
 
 .btn-primary {
-  background-color: var(--primary);
-  border-color: var(--primary) ;
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
   transition: all 0.3s ease; /* animação suave */
 }
 .btn-primary:hover,
