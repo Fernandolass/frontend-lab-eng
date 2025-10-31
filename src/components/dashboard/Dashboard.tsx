@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Dashboard.css';
-import { listarProjetos } from '../../data/projects';
+import { listarProjetos, obterProjeto } from '../../data/projects';
 import type { ProjetoDetalhes } from '../../data/mockData';
 import { DashboardRoutes } from './DashboardRoutes';
 
@@ -36,7 +36,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   const currentView = getCurrentView();
 
-  // 🔹 Busca projetos SOMENTE quando entra em uma view de projetos
+  //  Busca projetos SOMENTE quando entra em uma view de projetos
   useEffect(() => {
     const carregarProjetos = async () => {
       if (!['aprovados', 'reprovados', 'pendentes'].includes(currentView)) {
@@ -49,8 +49,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         if (currentView === 'reprovados') status = "REPROVADO";
         if (currentView === 'pendentes') status = "PENDENTE";
 
-        const data = await listarProjetos(1, status);
-        setProjects(data.results);
+        const { results } = await listarProjetos(1, status);
+
+        //  Buscar ambientes e materiais de cada projeto
+        const projetosCompletos = await Promise.all(
+          results.map(async (proj: ProjetoDetalhes) => {
+            const completo = await obterProjeto(proj.id); // <- traz ambientes + materiais
+            return completo;
+          })
+        );
+
+        setProjects(projetosCompletos);
+        console.log("Projetos carregados:", projetosCompletos);
         setErro(null);
       } catch (err) {
         console.error('Erro ao carregar projetos:', err);

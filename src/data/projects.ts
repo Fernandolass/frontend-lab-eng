@@ -35,27 +35,33 @@ function mapProjeto(p: any): ProjetoDetalhes {
   };
 }
 
-// 🔹 agora com paginação e filtro de status
+//  agora com paginação e filtro de status
 export async function listarProjetos(
   page: number = 1,
   status?: "APROVADO" | "REPROVADO" | "PENDENTE"
-): Promise<{
-  results: ProjetoDetalhes[];
-  next: string | null;
-  previous: string | null;
-  count: number;
-}> {
+) {
   const query = new URLSearchParams();
   query.set("page", page.toString());
   if (status) query.set("status", status);
 
   const data = await apiFetch(`/api/projetos/?${query.toString()}`);
 
+  //  Se vier paginado (tem "results"), usa data.results
+  if (Array.isArray(data.results)) {
+    return {
+      results: data.results.map(mapProjeto),
+      next: data.next,
+      previous: data.previous,
+      count: data.count,
+    };
+  }
+
+  //  Se NÃO vier paginado (lista direta), converte a lista inteira
   return {
-    results: (data.results || []).map(mapProjeto),
-    next: data.next,
-    previous: data.previous,
-    count: data.count,
+    results: data.map(mapProjeto),
+    next: null,
+    previous: null,
+    count: data.length,
   };
 }
 
@@ -96,7 +102,7 @@ export async function statsDashboard() {
   }>;
 }
 
-// 🔹 novo: estatísticas mensais
+// novo: estatísticas mensais
 export async function statsMensais() {
   return apiFetch("/api/stats/mensais/") as Promise<
     Array<{
@@ -135,14 +141,18 @@ export async function criarAmbiente(dados: {
   });
 }
 
+// --- Ambientes ---
 export async function listarAmbientes() {
   const data = await apiFetch("/api/ambientes/?disponiveis=1");
-  return (data.results as any[]).map((a) => ({
+
+  // Aceitar tanto lista direta como paginada
+  const lista = Array.isArray(data) ? data : data.results || [];
+
+  return lista.map((a: any) => ({
     id: a.id,
-    nome: a.nome_do_ambiente,
-    categoria: a.categoria,
+    nome: a.nome_do_ambiente || a.nome || "",
+    categoria: a.categoria || "",
     tipo: a.tipo || null,
-    guia_de_cores: a.guia_de_cores || "",
     projeto: a.projeto || null,
   }));
 }

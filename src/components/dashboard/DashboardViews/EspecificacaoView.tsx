@@ -13,58 +13,40 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
   const [materiaisPorAmbiente, setMateriaisPorAmbiente] = useState<Record<number, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [sugestoes, setSugestoes] = useState<Record<string, string[]>>({});
-  const [itensDisponiveis, setItensDisponiveis] = useState<Array<{ key: string; label: string }>>([]);
+  const [mostrarOutro, setMostrarOutro] = useState<Record<number, boolean>>({});
 
-  // 🔹 Carrega projeto e monta dados locais
+  // Carrega dados do projeto
   useEffect(() => {
     const carregar = async () => {
       if (!projetoId) return;
 
       try {
         const proj = await obterProjeto(parseInt(projetoId));
-
-        // 🔹 Garante que todos os ambientes tenham seus materiais carregados
         const materiais: Record<number, any[]> = {};
         proj.ambientes.forEach((amb: any) => {
           materiais[amb.id] = amb.materials || [];
         });
 
-        // 🔹 Monta lista de itens e sugestões — agora por ambiente + item
+        // Monta as sugestões por ambiente + item
         const agrupado: Record<string, Set<string>> = {};
-        const itensUnicos: Record<string, string> = {};
-
         proj.ambientes.forEach((amb: any) => {
           (amb.materials || []).forEach((m: any) => {
             const itemKey = m.item?.toUpperCase()?.trim();
             if (!itemKey) return;
-
-            // 🔑 chave única ambiente + item
             const chave = `${amb.nome_do_ambiente?.toUpperCase()}__${itemKey}`;
-
-            itensUnicos[chave] = `${amb.nome_do_ambiente} - ${m.item_label || itemKey}`;
             if (!agrupado[chave]) agrupado[chave] = new Set();
-
             if (m.descricao) agrupado[chave].add(m.descricao.trim());
           });
         });
 
-        // 🔹 Converte Set → Array
         const limpo: Record<string, string[]> = {};
         Object.keys(agrupado).forEach((key) => {
           limpo[key] = Array.from(agrupado[key]);
         });
 
-        const itensArr = Object.keys(itensUnicos).map((k) => ({
-          key: k,
-          label: itensUnicos[k],
-        }));
-
-        // 🔹 Atualiza estados
         setProjeto(proj);
-        setMateriaisPorAmbiente(materiais);
         setSugestoes(limpo);
-        setItensDisponiveis(itensArr);
-
+        setMateriaisPorAmbiente(materiais);
       } catch (err) {
         console.error("Erro ao carregar especificação:", err);
         alert("Erro ao carregar dados da especificação técnica.");
@@ -76,7 +58,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
     carregar();
   }, [projetoId]);
 
-  // 🔹 Atualiza descrição existente (PATCH)
+  // Atualiza um material existente
   const handleChange = async (ambienteId: number, materialId: number, value: string) => {
     setMateriaisPorAmbiente((prev) => ({
       ...prev,
@@ -96,28 +78,8 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
     }
   };
 
-  // 🔹 Cria novo material se não existir
-  const handleCriar = async (ambienteId: number, item: string, descricao: string) => {
-    if (!descricao) return;
-    try {
-      const novo = await criarMaterial({
-        ambiente: ambienteId,
-        item,
-        descricao,
-        marca: null,
-      });
-      setMateriaisPorAmbiente((prev) => ({
-        ...prev,
-        [ambienteId]: [...(prev[ambienteId] || []), novo],
-      }));
-    } catch (err) {
-      console.error("Erro ao criar material:", err);
-    }
-  };
-
   if (loading || !projeto) return <p>Carregando...</p>;
-
-  return (
+    return (
     <div className="container mt-4">
       <h2 className="text-center page-title mb-5">ESPECIFICAÇÃO TÉCNICA</h2>
       <h5 className="text-muted mb-4 text-center">{projeto.nome_do_projeto}</h5>
@@ -136,43 +98,88 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
               </tr>
             </thead>
             <tbody>
-              {(materiaisPorAmbiente[amb.id] || []).map((m) => {
+              {[
+                ...new Map(
+                  (materiaisPorAmbiente[amb.id] || []).map((m: any) => [m.item, m])
+                ).values()
+              ].map((m: any) => {
                 const chave = `${amb.nome_do_ambiente?.toUpperCase()}__${m.item?.toUpperCase()}`;
                 const opcoes = sugestoes[chave] || [];
+
+                const mostrandoOutro = m.descricao === "" || m.descricao === undefined;
+
                 return (
                   <tr key={m.id}>
-                    <td className="fw-semibold">{m.item_label}</td>
-                    <td>
-                      <select
-                        className="form-select"
+                    <td className="fw-semibold">{m.item_label || m.item}</td>
+                <td>
+                  <select
+                    className="form-select"
+                    value={m.descricao || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "_outro") {
+                        // Ativa o campo manual sem apagar nada
+                        setMostrarOutro((prev) => ({ ...prev, [m.id]: true }));
+                        setMateriaisPorAmbiente((prev) => ({
+                          ...prev,
+                          [amb.id]: prev[amb.id].map((item) =>
+                            item.id === m.id ? { ...item, descricao: "" } : item
+                          ),
+                        }));
+                      } else {
+                        setMostrarOutro((prev) => ({ ...prev, [m.id]: false }));
+                        handleChange(amb.id, m.id, val); // Salva normalmente
+                      }
+                    }}
+                  >
+                    <option value="">Selecione...</option>
+                    {opcoes.map((desc) => (
+                      <option key={desc} value={desc}>
+                        {desc}
+                      </option>
+                    ))}
+                    <option value="_outro">Outro (escrever manualmente)</option>
+                  </select>
+
+                  {/* ✅ Campo aparece SE o usuário escolheu "Outro" */}
+                  {mostrarOutro[m.id] && (
+                    <div className="mt-2 d-flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Digite a nova descrição..."
+                        className="form-control"
                         value={m.descricao || ""}
                         onChange={(e) => {
                           const val = e.target.value;
-                          if (val === "_outro") {
-                            handleChange(amb.id, m.id, "");
-                          } else {
-                            handleChange(amb.id, m.id, val);
+                          setMateriaisPorAmbiente((prev) => ({
+                            ...prev,
+                            [amb.id]: prev[amb.id].map((item) =>
+                              item.id === m.id ? { ...item, descricao: val } : item
+                            ),
+                          }));
+                        }}
+                      />
+                      <button
+                        className="btn btn-success"
+                        onClick={async () => {
+                          const valor = materiaisPorAmbiente[amb.id].find(
+                            (item) => item.id === m.id
+                          )?.descricao;
+
+                          if (!valor) {
+                            alert("Digite uma descrição antes de salvar!");
+                            return;
                           }
+                          await handleChange(amb.id, m.id, valor);
+                          setMostrarOutro((prev) => ({ ...prev, [m.id]: false }));
+                          alert("Descrição salva com sucesso!");
                         }}
                       >
-                        <option value="">Selecione...</option>
-                        {opcoes.map((desc) => (
-                          <option key={desc} value={desc}>
-                            {desc}
-                          </option>
-                        ))}
-                        <option value="_outro">Outro (escrever manualmente)</option>
-                      </select>
-
-                      {m.descricao === "" && (
-                        <input
-                          type="text"
-                          className="form-control mt-2"
-                          placeholder={`Descreva o ${m.item_label.toLowerCase()}...`}
-                          onBlur={(e) => handleChange(amb.id, m.id, e.target.value)}
-                        />
-                      )}
-                    </td>
+                        Salvar
+                      </button>
+                    </div>
+                  )}
+                </td>
                   </tr>
                 );
               })}
@@ -234,24 +241,6 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
             )}
           </tbody>
         </table>
-
-        <button
-          className="btn btn-outline-primary"
-          onClick={async () => {
-            await apiFetch("/api/marcas-descricao/", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                material: "Novo Material",
-                marcas: "",
-                projeto: projeto.id,
-              }),
-            });
-            window.location.reload();
-          }}
-        >
-          + Adicionar Linha
-        </button>
       </div>
 
       {/* ===================== OBSERVAÇÕES GERAIS ===================== */}

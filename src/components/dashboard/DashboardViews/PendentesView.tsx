@@ -12,12 +12,13 @@ const PendentesView: React.FC<PendentesViewProps> = ({
   onViewDetails, 
   onEditProject 
 }) => {
-  // Função para contar materiais pendentes em um projeto
-  const contarMateriaisPendentes = (project: ProjetoDetalhes): number => {
-    return project.ambientes.reduce((total, ambiente) => {
-      return total + ambiente.materiais.filter(material => material.status === 'pendente').length;
-    }, 0);
-  };
+// Função para contar materiais pendentes em um projeto
+const contarMateriaisPendentes = (project: ProjetoDetalhes): number => {
+  return project.ambientes?.reduce((total, ambiente) => {
+    const materiais = ambiente.materiais || []; // evita erro
+    return total + materiais.filter(material => material.status === 'pendente').length;
+  }, 0) || 0;
+};
 
   return (
     <div>

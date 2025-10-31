@@ -34,7 +34,7 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
   useEffect(() => {
     const carregarDados = async () => {
       try {
-        // 🔹 Totais
+        // Totais
         const stats = await apiFetch('/api/stats/dashboard/');
         setMetricsData({
           aprovados: stats.projetos_aprovados,
@@ -43,7 +43,7 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
           total: stats.total_projetos,
         });
 
-        // 🔹 Mensais
+        // Mensais
         const mensais = await apiFetch('/api/stats/mensais/');
         const monthlyArr = Object.entries(mensais).map(([mes, valores]: any) => ({
           mes,
@@ -51,7 +51,7 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
         }));
         setMonthlyData(monthlyArr.slice(-9)); // pega últimos 9 meses
 
-        // 🔹 Logs recentes
+        // Logs recentes
         const logs = await apiFetch('/api/logs/');
         setRecentLogs(Array.isArray(logs) ? logs.slice(0, 5) : []);
       } catch (err) {

@@ -16,7 +16,6 @@ package-lock.json
 
 # React environment files
 .env
-.env.*
 
 # =========================
 # BACKEND (Django)

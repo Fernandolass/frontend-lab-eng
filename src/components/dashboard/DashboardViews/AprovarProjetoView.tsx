@@ -19,6 +19,7 @@ interface Material {
   motivo?: string;
   aprovador_email?: string;
   data_aprovacao?: string;
+  projeto?: number;
 }
 
 interface Ambiente {
@@ -45,7 +46,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
   const [observacoesTemp, setObservacoesTemp] = useState<{ [key: string]: string }>({});
   const [ambientesContraidos, setAmbientesContraidos] = useState<{ [key: number]: boolean }>({});
 
-  // 🔹 Buscar projeto do backend
+  // Buscar projeto do backend
   useEffect(() => {
     const carregarProjeto = async () => {
       if (!projetoId) return;
@@ -62,7 +63,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     carregarProjeto();
   }, [projetoId]);
 
-  // 🔹 Função auxiliar: verifica se o projeto deve ser aprovado ou reprovado
+  // Função auxiliar: verifica se o projeto deve ser aprovado ou reprovado
   const verificarStatusProjeto = async (dadosProjeto: ProjetoDetalhes) => {
     const todosMateriais = dadosProjeto.ambientes.flatMap((a) => a.materials);
     const pendentes = todosMateriais.filter((m) => m.status === "PENDENTE").length;
@@ -110,36 +111,35 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     );
   }
 
-  // ✅ Aprovar material individual
+  // Aprovar material individual
   const handleAprovarMaterial = async (ambienteId: number, materialId: number) => {
     try {
       await aprovarMaterial(materialId);
 
-      setProjetoData((prev) => {
-        if (!prev) return prev;
-        const atualizado = {
-          ...prev,
-          ambientes: prev.ambientes.map((ambiente) =>
-            ambiente.id === ambienteId
-              ? {
-                  ...ambiente,
-                  materials: ambiente.materials.map((m) =>
-                    m.id === materialId
-                      ? {
-                          ...m,
-                          status: "APROVADO",
-                          data_aprovacao: new Date().toISOString(),
-                        }
-                      : m
-                  ),
-                }
-              : ambiente
-          ),
-        };
-        verificarStatusProjeto(atualizado);
-        return atualizado;
-      });
+    setProjetoData((prev) => {
+      if (!prev) return prev;
 
+      const atualizado = {
+        ...prev,
+        ambientes: prev.ambientes.map((ambiente) =>
+          ambiente.id === ambienteId
+            ? {
+                ...ambiente,
+                materials: ambiente.materials.map((m) =>
+                  m.id === materialId
+                    ? { ...m, status: "APROVADO", data_aprovacao: new Date().toISOString() }
+                    : m
+                ),
+              }
+            : ambiente
+        ),
+      };
+
+      // Chama a verificação com o estado atualizado
+      verificarStatusProjeto(atualizado);
+
+      return atualizado;
+    });
       setObservacoesTemp((prev) => {
         const novo = { ...prev };
         delete novo[materialId];
@@ -152,7 +152,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     }
   };
 
-  // ❌ Reprovar material individual
+  // Reprovar material individual
   const handleReprovarMaterial = async (ambienteId: number, materialId: number) => {
     const motivo =
       observacoesTemp[materialId] || "Item reprovado sem observações específicas";
@@ -298,7 +298,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
       {/* Ambientes */}
       <div className="checklist-container">
         {projetoData.ambientes.map((ambiente) => {
-          const pendentes = ambiente.materials.filter((m) => m.status === "PENDENTE");
+          const pendentes = ambiente.materials.filter((m) => m.status === "PENDENTE" && m.id && m.projeto !== null);
           const processados = ambiente.materials.filter((m) => m.status !== "PENDENTE");
           const isContraido = ambientesContraidos[ambiente.id];
 

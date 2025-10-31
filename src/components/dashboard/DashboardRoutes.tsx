@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import InicioView from './DashboardViews/InicioView';
-import CriarDocumentoView from './DashboardViews/CriarDocumentoView';
 import CriarProjetoView from './DashboardViews/CriarProjetoView';
 import EspecificacaoView from './DashboardViews/EspecificacaoView';
 import AprovadosView from './DashboardViews/AprovadosView';
@@ -36,10 +35,6 @@ export function DashboardRoutes({ onNavigate, projects, loading, erro }: Dashboa
         element={<InicioView onViewDetails={() => onNavigate('/dashboard/aprovados')} />} 
       />
       <Route 
-        path="criar-documento" 
-        element={<CriarDocumentoView onViewDetails={() => onNavigate('/dashboard/pendentes')} />} 
-      />
-      <Route 
         path="criar-projeto" 
         element={<CriarProjetoView onNext={(id) => onNavigate(`/dashboard/especificacao/${id}`)} />} 
       />
@@ -51,7 +46,7 @@ export function DashboardRoutes({ onNavigate, projects, loading, erro }: Dashboa
         path="aprovados" 
         element={
           <AprovadosView
-            projects={projects.filter((p) => p.status === 'aprovado')}
+            projects={projects.filter((p) => p.status === 'APROVADO')}
             onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
           />
         } 
@@ -60,7 +55,7 @@ export function DashboardRoutes({ onNavigate, projects, loading, erro }: Dashboa
         path="reprovados" 
         element={
           <ReprovadosView
-            projects={projects.filter((p) => p.status === 'reprovado')}
+            projects={projects.filter((p) => p.status?.toUpperCase() === 'REPROVADO')}
             onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
           />
         } 
@@ -69,7 +64,7 @@ export function DashboardRoutes({ onNavigate, projects, loading, erro }: Dashboa
         path="pendentes" 
         element={
           <PendentesView
-            projects={projects.filter((p) => p.status === 'pendente')}
+            projects={projects.filter((p) => p.status?.toUpperCase() === 'PENDENTE')}
             onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
             onEditProject={(id) => onNavigate(`/dashboard/aprovar-projeto/${id}`)}
           />

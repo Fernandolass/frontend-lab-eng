@@ -77,12 +77,12 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 }
 
 /* ==========================================================
-   🔹 GET DETALHES DE PROJETO (com materiais filtrados por projeto)
+    GET DETALHES DE PROJETO (com materiais filtrados por projeto)
    ========================================================== */
 export async function getProjetoDetalhes(id: number) {
   const projeto = await apiFetch(`/api/projetos/${id}/`);
 
-  // 🔹 Carrega os materiais de cada ambiente, filtrando por projeto
+  //  Carrega os materiais de cada ambiente, filtrando por projeto
   const ambientes = await Promise.all(
     (projeto.ambientes || []).map(async (a: any) => {
       const data = await apiFetch(`/api/materiais/?projeto=${id}&ambiente=${a.id}`);
@@ -95,7 +95,7 @@ export async function getProjetoDetalhes(id: number) {
 }
 
 /* ==========================================================
-   🔹 MATERIAIS
+    MATERIAIS
    ========================================================== */
 export async function aprovarMaterial(materialId: number) {
   return apiFetch(`/api/materiais/${materialId}/aprovar/`, {
@@ -111,7 +111,7 @@ export async function reprovarMaterial(materialId: number, motivo: string) {
 }
 
 /* ==========================================================
-   🔹 DASHBOARD / ESTATÍSTICAS
+    DASHBOARD / ESTATÍSTICAS
    ========================================================== */
 export async function getDashboardStats() {
   return apiFetch("/api/stats/dashboard/");
