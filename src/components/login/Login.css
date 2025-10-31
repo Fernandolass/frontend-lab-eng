@@ -1,6 +1,6 @@
 .login-container {
   min-height: 100vh;
-  background: url('\image.png') no-repeat center center fixed;
+  background: url('/./public/fundobackground.jpg') no-repeat center center fixed;
   background-size: cover;
   display: flex;
   align-items: center;
@@ -70,14 +70,14 @@
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-size: 0.9rem;
-  border: 1px solid #BC1F1B;
-  background: rgba(188, 31, 27, 0.1);
-  color: #BC1F1B;
+  border: 1px solid #331bbc;
+  background: #331bbc;
+  color: #331bbc;
   transition: all 0.3s ease;
 }
 
 .test-btn:hover {
-  background: #BC1F1B;
+  background: #331bbc;
   color: white;
   transform: translateY(-2px);
 }
@@ -102,8 +102,9 @@
 
 .form-control:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 0.25rem rgba(188, 31, 27, 0.25);
+  box-shadow: 0 0 0 0.01rem #331bbc !important;
 }
+
 
 .form-label {
   color: #6c757d;
@@ -145,21 +146,21 @@
 
 .login-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(188, 31, 27, 0.3);
+  box-shadow: 0 2.5px 7.5px #331bbc !important;
 }
 
 .btn-primary {
-  background-color: var(--primary) !important;
-  border-color: var(--primary) !important;
+  background-color: var(--primary);
+  border-color: var(--primary) ;
   transition: all 0.3s ease; /* animação suave */
 }
-.btn-primary:hover,
-.btn-primary:focus,
-.btn-primary:active,
-.btn-primary:focus-visible {
-    background-color: #9A1A18 !important; /* cor escura */
-    border-color: #9A1A18 !important;
-    outline: none; /* remove a borda azul */
+button .btn-primary:hover,
+button .btn-primary:focus,
+button .btn-primary:active,
+button .btn-primary:focus-visible {
+    background-color: #331bbc !important; /* cor escura */
+    border-color: #331bbc !important;
+
 }
 
 
@@ -215,4 +216,9 @@
 
 .login-form-container {
   animation: fadeIn 0.6s ease-out;
+}
+
+.form-control:focus{
+  border-color: #331bbc !important; /* sua cor desejada */
+  box-shadow: 0 0 0 0.1rem rgba(51, 27, 188, 0.25) !important;
 }

@@ -8,7 +8,6 @@ import EspecificacaoView from './DashboardViews/EspecificacaoView';
 import AprovadosView from './DashboardViews/AprovadosView';
 import ReprovadosView from './DashboardViews/ReprovadosView';
 import PendentesView from './DashboardViews/PendentesView';
-import ModelosView from './DashboardViews/ModelosView';
 import LogsView from './DashboardViews/LogsView';
 import DetalhesProjetoView from './DashboardViews/DetalhesProjetoView';
 import DetalhesModeloView from './DashboardViews/DetalhesModeloView';
@@ -73,22 +72,6 @@ export function DashboardRoutes({ onNavigate, projects, loading, erro }: Dashboa
             projects={projects.filter((p) => p.status === 'pendente')}
             onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
             onEditProject={(id) => onNavigate(`/dashboard/aprovar-projeto/${id}`)}
-          />
-        } 
-      />
-      <Route 
-        path="modelos" 
-        element={
-          <ModelosView
-            modelos={modelos}
-            onViewDetails={(id: number) => onNavigate(`/dashboard/detalhes-modelo/${id}`)}
-            onCreateModel={() => onNavigate('/dashboard/criar-modelo')}
-            onEditModel={(id: number) => onNavigate(`/dashboard/editar-modelo/${id}`)}
-            onDeleteModel={(id: number) => {
-              if (window.confirm('Tem certeza que deseja excluir este modelo?')) {
-                setModelos(modelos.filter((m: any) => m.id !== id));
-              }
-            }}
           />
         } 
       />

@@ -53,8 +53,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="text-center mb-4">
           <img
             className="login-logo"
-            src="/logo_jnunes_normal.png"
-            alt="Logo JNunes"
+            src="/logo_techfundopngflowESTICADO.png"
+            alt="Logo Tech Flow"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}

@@ -1,7 +1,7 @@
 /* src/components/Dashboard/Dashboard.css */
 :root {
-  --primary-color: #BC1F1B;
-  --primary-hover: #9A1A18;
+  --primary-color: #331bbc;
+  --primary-hover: #4a28f0;
   --secondary-color: #2B2522;
   --muted-color: #6c757d;
   --light-bg: #f8f9fa;
@@ -38,12 +38,11 @@
   left: 0;
   right: 0;
   height: 90px;
-  background: url('\image.png') no-repeat center center fixed;
+  background: url('/./public/fundobackground.jpg') no-repeat center center fixed;
   background-size: cover;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 2rem;
   z-index: 1000;
   box-shadow: 0 2px 15px rgba(0, 0, 0, 0.15);
 }
@@ -51,14 +50,11 @@
 .header-logo {
   display: flex;
   align-items: center;
-  gap: 1.2rem;
 }
 
-.header-logo-image {
-  max-height: 55px;
-  filter: brightness(0) invert(1);
-  /* transition: transform 0.3s ease; */
-}
+ .header-logo-image {
+  max-height: 75px;
+} 
 
 .header-logo-image:hover {
   cursor: pointer;
@@ -77,6 +73,7 @@
   align-items: center;
   gap: 1.2rem;
   color: var(--white);
+  padding: 0 2rem;
 }
 
 .header-user-info {
@@ -148,11 +145,11 @@
 }
 
 .nav-item:hover {
-  background: rgba(188, 31, 27, 0.1);
+  background: rgba(102, 79, 255, 0.15);;
 }
 
 .nav-item.active {
-  background: rgba(188, 31, 27, 0.15);
+  background-color: rgba(102, 79, 255, 0.2);
   border-left-color: var(--primary-color);
 }
 
@@ -228,11 +225,11 @@
 }
 
 .submenu-item:hover {
-  background: rgba(188, 31, 27, 0.1);
+  background: rgba(102, 79, 255, 0.2);
 }
 
 .submenu-item.active {
-  background: rgba(188, 31, 27, 0.15);
+  background: rgba(102, 79, 255, 0.25);
   border-left-color: var(--primary-color);
 }
 
@@ -559,7 +556,7 @@
 .form-select:focus {
   border-color: var(--primary-color);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(188, 31, 27, 0.1);
+  box-shadow: 0 0 0 3px rgba(102, 79, 255, 0.2);
 }
 
 textarea.form-control {
@@ -616,9 +613,9 @@ textarea.form-control {
 .btn-primary:focus,
 .btn-primary:active,
 .btn-primary:focus-visible {
-    background-color: #9A1A18 !important; /* cor escura */
-    border-color: #9A1A18 !important;
-    outline: none; /* remove a borda azul */
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  outline: none; /* remove a borda azul */
 }
 .btn-success {
   background: var(--success-color);

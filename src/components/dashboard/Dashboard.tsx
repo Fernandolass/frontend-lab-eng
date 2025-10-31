@@ -87,14 +87,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       {/* Header */}
       <header className="dashboard-header">
         <div className="header-logo">
-          <img
-            src="/logo_jnunes_normal.png"
-            alt="Logo Jotanunes"
-            className="header-logo-image"
-            onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
-          />
+        <img
+          src="/logo_techflowheader.png"
+          alt="Logo Jotanunes"
+          className="header-logo-image"
+          onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
+        />
         </div>
-
         <div className="header-user">
           <div className="header-user-info">
             <span className="header-user-name">{userName}</span>
@@ -151,7 +150,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             </li>
 
             {[
-              { key: 'modelos', path: '/dashboard/modelos', label: 'Modelos' },
+              
               { key: 'logs', path: '/dashboard/logs', label: 'Logs' },
             ].map((item) => (
               <li
