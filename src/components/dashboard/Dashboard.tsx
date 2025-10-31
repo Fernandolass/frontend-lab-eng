@@ -89,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         <div className="header-logo">
         <img
           src="/logo_techflowheader.png"
-          alt="Logo Jotanunes"
+          alt="Logo"
           className="header-logo-image"
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
         />
