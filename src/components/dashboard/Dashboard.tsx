@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Dashboard.css';
-import { listarProjetos, obterProjeto } from '../../data/projects';
+import { listarProjetos } from '../../data/projects';
 import type { ProjetoDetalhes } from '../../data/mockData';
 import { DashboardRoutes } from './DashboardRoutes';
 
@@ -26,6 +26,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const getCurrentView = () => {
     const path = location.pathname;
     if (path.includes('criar-projeto')) return 'criar-projeto';
+    if (path.includes('criar-usuario')) return 'criar-usuario';
     if (path.includes('aprovados')) return 'aprovados';
     if (path.includes('reprovados')) return 'reprovados';
     if (path.includes('pendentes')) return 'pendentes';
@@ -33,10 +34,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     if (path.includes('logs')) return 'logs';
     return 'inicio';
   };
-
+const isSuperAdmin = () => {
+  const userRole = localStorage.getItem('userRole');
+  return userRole === 'superadmin';
+};
   const currentView = getCurrentView();
 
-  //  Busca projetos SOMENTE quando entra em uma view de projetos
+  // 🔹 Busca projetos SOMENTE quando entra em uma view de projetos
   useEffect(() => {
     const carregarProjetos = async () => {
       if (!['aprovados', 'reprovados', 'pendentes'].includes(currentView)) {
@@ -49,18 +53,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         if (currentView === 'reprovados') status = "REPROVADO";
         if (currentView === 'pendentes') status = "PENDENTE";
 
-        const { results } = await listarProjetos(1, status);
-
-        //  Buscar ambientes e materiais de cada projeto
-        const projetosCompletos = await Promise.all(
-          results.map(async (proj: ProjetoDetalhes) => {
-            const completo = await obterProjeto(proj.id); // <- traz ambientes + materiais
-            return completo;
-          })
-        );
-
-        setProjects(projetosCompletos);
-        console.log("Projetos carregados:", projetosCompletos);
+        const data = await listarProjetos(1, status);
+        setProjects(data.results);
         setErro(null);
       } catch (err) {
         console.error('Erro ao carregar projetos:', err);
@@ -97,13 +91,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       {/* Header */}
       <header className="dashboard-header">
         <div className="header-logo">
-        <img
-          src="/logo_techflowheader.png"
-          alt="Logo"
-          className="header-logo-image"
-          onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
-        />
+          <img
+            src="/logo_jnunes_normal.png"
+            alt="Logo Jotanunes"
+            className="header-logo-image"
+            onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
+          />
         </div>
+
         <div className="header-user">
           <div className="header-user-info">
             <span className="header-user-name">{userName}</span>
@@ -120,6 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             {[
               { key: 'inicio', path: '/dashboard/inicio', label: 'Inicio' },
               { key: 'criar-projeto', path: '/dashboard/criar-projeto', label: 'Criar Projeto' },
+              { key: 'criar-usuario', path: '/dashboard/criar-usuario', label: 'Criar novo usuário' }, // <-- adicionado aqui
             ].map((item) => (
               <li
                 key={item.key}
@@ -158,9 +154,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 </ul>
               )}
             </li>
-
-            {[
               
+            {[
+              { key: 'modelos', path: '/dashboard/modelos', label: 'Modelos' },
               { key: 'logs', path: '/dashboard/logs', label: 'Logs' },
             ].map((item) => (
               <li

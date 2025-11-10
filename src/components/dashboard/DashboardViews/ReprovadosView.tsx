@@ -10,11 +10,6 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ projects, onViewDetails
   <div>
     <div className="content-header">
       <h1>Projetos Reprovados</h1>
-      <div className="header-actions">
-        <button className="btn btn-primary">
-          Exportar Dados
-        </button>
-      </div>
     </div>
 
     <div className="projects-table-container">
@@ -34,10 +29,10 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ projects, onViewDetails
            {projects.map(project => (
             <tr key={project.id} className="project-row">
               <td>{project.id}</td>
-              <td className="project-name">{project.nome_do_projeto}</td>
-              <td>{project.tipo_do_projeto}</td>
-              <td>{project.data_criacao?.split('T')[0]}</td>
-              <td>{project.responsavel_nome || '—'}</td>
+              <td className="project-name">{project.nome}</td>
+              <td>{project.tipoProjeto}</td>
+              <td>{project.dataCriacao}</td>
+              <td>{project.responsavel}</td>
               <td>
                 <span className="status-badge reprovado">
                   Reprovado

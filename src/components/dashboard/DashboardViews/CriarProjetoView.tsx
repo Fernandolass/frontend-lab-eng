@@ -29,7 +29,7 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
       try {
         const ambientes = await listarAmbientes();
         // mostra apenas ambientes "genéricos" (sem projeto)
-        setAmbientesLista(ambientes.filter((a: any) => !a.projeto));
+        setAmbientesLista(ambientes);
       } catch {
         alert("Erro ao carregar ambientes");
       }
@@ -78,8 +78,10 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
   };
 
   return (
-    <div className="container mt-4">
-      <h2>Criar Novo Projeto</h2>
+    <div className="">
+      <div className="content-header">
+        <h1>Criar novo projeto</h1>
+      </div>
       <form onSubmit={handleSubmit}>
         <div className="row mb-3">
           <div className="col-md-6">
