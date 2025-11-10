@@ -9,11 +9,6 @@ const AprovadosView: React.FC<AprovadosViewProps> = ({ projects, onViewDetails }
   <div>
     <div className="content-header">
       <h1>Projetos Aprovados</h1>
-      <div className="header-actions">
-        <button className="btn btn-primary">
-          Exportar Dados
-        </button>
-      </div>
     </div>
 
     <div className="projects-table-container">

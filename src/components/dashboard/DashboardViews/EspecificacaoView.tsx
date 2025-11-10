@@ -13,40 +13,58 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
   const [materiaisPorAmbiente, setMateriaisPorAmbiente] = useState<Record<number, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [sugestoes, setSugestoes] = useState<Record<string, string[]>>({});
-  const [mostrarOutro, setMostrarOutro] = useState<Record<number, boolean>>({});
+  const [itensDisponiveis, setItensDisponiveis] = useState<Array<{ key: string; label: string }>>([]);
 
-  // Carrega dados do projeto
+  // 🔹 Carrega projeto e monta dados locais
   useEffect(() => {
     const carregar = async () => {
       if (!projetoId) return;
 
       try {
         const proj = await obterProjeto(parseInt(projetoId));
+
+        // 🔹 Garante que todos os ambientes tenham seus materiais carregados
         const materiais: Record<number, any[]> = {};
         proj.ambientes.forEach((amb: any) => {
           materiais[amb.id] = amb.materials || [];
         });
 
-        // Monta as sugestões por ambiente + item
+        // 🔹 Monta lista de itens e sugestões — agora por ambiente + item
         const agrupado: Record<string, Set<string>> = {};
+        const itensUnicos: Record<string, string> = {};
+
         proj.ambientes.forEach((amb: any) => {
           (amb.materials || []).forEach((m: any) => {
             const itemKey = m.item?.toUpperCase()?.trim();
             if (!itemKey) return;
+
+            // 🔑 chave única ambiente + item
             const chave = `${amb.nome_do_ambiente?.toUpperCase()}__${itemKey}`;
+
+            itensUnicos[chave] = `${amb.nome_do_ambiente} - ${m.item_label || itemKey}`;
             if (!agrupado[chave]) agrupado[chave] = new Set();
+
             if (m.descricao) agrupado[chave].add(m.descricao.trim());
           });
         });
 
+        // 🔹 Converte Set → Array
         const limpo: Record<string, string[]> = {};
         Object.keys(agrupado).forEach((key) => {
           limpo[key] = Array.from(agrupado[key]);
         });
 
+        const itensArr = Object.keys(itensUnicos).map((k) => ({
+          key: k,
+          label: itensUnicos[k],
+        }));
+
+        // 🔹 Atualiza estados
         setProjeto(proj);
-        setSugestoes(limpo);
         setMateriaisPorAmbiente(materiais);
+        setSugestoes(limpo);
+        setItensDisponiveis(itensArr);
+
       } catch (err) {
         console.error("Erro ao carregar especificação:", err);
         alert("Erro ao carregar dados da especificação técnica.");
@@ -58,7 +76,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
     carregar();
   }, [projetoId]);
 
-  // Atualiza um material existente
+  // 🔹 Atualiza descrição existente (PATCH)
   const handleChange = async (ambienteId: number, materialId: number, value: string) => {
     setMateriaisPorAmbiente((prev) => ({
       ...prev,
@@ -78,11 +96,33 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
     }
   };
 
+  // 🔹 Cria novo material se não existir
+  const handleCriar = async (ambienteId: number, item: string, descricao: string) => {
+    if (!descricao) return;
+    try {
+      const novo = await criarMaterial({
+        ambiente: ambienteId,
+        item,
+        descricao,
+        marca: null,
+      });
+      setMateriaisPorAmbiente((prev) => ({
+        ...prev,
+        [ambienteId]: [...(prev[ambienteId] || []), novo],
+      }));
+    } catch (err) {
+      console.error("Erro ao criar material:", err);
+    }
+  };
+
   if (loading || !projeto) return <p>Carregando...</p>;
-    return (
-    <div className="container mt-4">
-      <h2 className="text-center page-title mb-5">ESPECIFICAÇÃO TÉCNICA</h2>
-      <h5 className="text-muted mb-4 text-center">{projeto.nome_do_projeto}</h5>
+
+  return (
+    <div className="">
+      <div className="content-header">
+        <h1>Especificação Técnica</h1>
+      </div>
+      <h5 className="text-muted mb-5">{projeto.nome_do_projeto}</h5>
 
       {projeto.ambientes.map((amb: any) => (
         <div key={amb.id} className="mb-5">
@@ -98,88 +138,43 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
               </tr>
             </thead>
             <tbody>
-              {[
-                ...new Map(
-                  (materiaisPorAmbiente[amb.id] || []).map((m: any) => [m.item, m])
-                ).values()
-              ].map((m: any) => {
+              {(materiaisPorAmbiente[amb.id] || []).map((m) => {
                 const chave = `${amb.nome_do_ambiente?.toUpperCase()}__${m.item?.toUpperCase()}`;
                 const opcoes = sugestoes[chave] || [];
-
-                const mostrandoOutro = m.descricao === "" || m.descricao === undefined;
-
                 return (
                   <tr key={m.id}>
-                    <td className="fw-semibold">{m.item_label || m.item}</td>
-                <td>
-                  <select
-                    className="form-select"
-                    value={m.descricao || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === "_outro") {
-                        // Ativa o campo manual sem apagar nada
-                        setMostrarOutro((prev) => ({ ...prev, [m.id]: true }));
-                        setMateriaisPorAmbiente((prev) => ({
-                          ...prev,
-                          [amb.id]: prev[amb.id].map((item) =>
-                            item.id === m.id ? { ...item, descricao: "" } : item
-                          ),
-                        }));
-                      } else {
-                        setMostrarOutro((prev) => ({ ...prev, [m.id]: false }));
-                        handleChange(amb.id, m.id, val); // Salva normalmente
-                      }
-                    }}
-                  >
-                    <option value="">Selecione...</option>
-                    {opcoes.map((desc) => (
-                      <option key={desc} value={desc}>
-                        {desc}
-                      </option>
-                    ))}
-                    <option value="_outro">Outro (escrever manualmente)</option>
-                  </select>
-
-                  {/* ✅ Campo aparece SE o usuário escolheu "Outro" */}
-                  {mostrarOutro[m.id] && (
-                    <div className="mt-2 d-flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Digite a nova descrição..."
-                        className="form-control"
+                    <td className="fw-semibold">{m.item_label}</td>
+                    <td>
+                      <select
+                        className="form-select"
                         value={m.descricao || ""}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setMateriaisPorAmbiente((prev) => ({
-                            ...prev,
-                            [amb.id]: prev[amb.id].map((item) =>
-                              item.id === m.id ? { ...item, descricao: val } : item
-                            ),
-                          }));
-                        }}
-                      />
-                      <button
-                        className="btn btn-success"
-                        onClick={async () => {
-                          const valor = materiaisPorAmbiente[amb.id].find(
-                            (item) => item.id === m.id
-                          )?.descricao;
-
-                          if (!valor) {
-                            alert("Digite uma descrição antes de salvar!");
-                            return;
+                          if (val === "_outro") {
+                            handleChange(amb.id, m.id, "");
+                          } else {
+                            handleChange(amb.id, m.id, val);
                           }
-                          await handleChange(amb.id, m.id, valor);
-                          setMostrarOutro((prev) => ({ ...prev, [m.id]: false }));
-                          alert("Descrição salva com sucesso!");
                         }}
                       >
-                        Salvar
-                      </button>
-                    </div>
-                  )}
-                </td>
+                        <option value="">Selecione...</option>
+                        {opcoes.map((desc) => (
+                          <option key={desc} value={desc}>
+                            {desc}
+                          </option>
+                        ))}
+                        <option value="_outro">Outro (escrever manualmente)</option>
+                      </select>
+
+                      {m.descricao === "" && (
+                        <input
+                          type="text"
+                          className="form-control mt-2"
+                          placeholder={`Descreva o ${m.item_label.toLowerCase()}...`}
+                          onBlur={(e) => handleChange(amb.id, m.id, e.target.value)}
+                        />
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -199,52 +194,44 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
             </tr>
           </thead>
           <tbody>
-            {projeto.descricao_marcas && projeto.descricao_marcas.length > 0 ? (
-              projeto.descricao_marcas.map((m: any) => (
-                <tr key={m.id}>
-                  <td>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={m.material}
-                      onChange={async (e) => {
-                        await apiFetch(`/api/marcas-descricao/${m.id}/`, {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ material: e.target.value }),
-                        });
-                      }}
-                    />
-                  </td>
-                  <td>
-                    <textarea
-                      className="form-control"
-                      rows={1}
-                      value={m.marcas}
-                      onChange={async (e) => {
-                        await apiFetch(`/api/marcas-descricao/${m.id}/`, {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ marcas: e.target.value }),
-                        });
-                      }}
-                    />
-                  </td>
+            {projeto.materiais_com_marcas && projeto.materiais_com_marcas.length > 0 ? (
+              projeto.materiais_com_marcas.map((m: any, index: number) => (
+                <tr key={index}>
+                  <td className="fw-semibold">{m.material}</td>
+                  <td>{m.marcas}</td>
                 </tr>
               ))
             ) : (
               <tr>
                 <td colSpan={2} className="text-center text-muted">
-                  Nenhuma marca cadastrada.
+                  Nenhuma marca encontrada nos itens descritos.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+
+        <button
+          className="btn btn-outline-primary"
+          onClick={async () => {
+            await apiFetch("/api/marcas-descricao/", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                material: "Novo Material",
+                marcas: "",
+                projeto: projeto.id,
+              }),
+            });
+            window.location.reload();
+          }}
+        >
+          + Adicionar Linha
+        </button>
       </div>
 
       {/* ===================== OBSERVAÇÕES GERAIS ===================== */}
-      <div className="mt-5">
+      {/* <div className="mt-5">
         <h4>Observações Gerais</h4>
         <textarea
           className="form-control"
@@ -259,7 +246,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
           }
           placeholder="Digite as observações gerais..."
         />
-      </div>
+      </div> */}
 
       <div className="d-flex justify-content-start mt-4">
         <button className="btn btn-secondary" onClick={onBack}>
