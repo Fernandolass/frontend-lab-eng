@@ -94,28 +94,38 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
     }
   };
 
-  const handleCriarAmbiente = async () => {
-    if (!novoAmbiente.nome || !novoAmbiente.tipo) {
-      alert("Informe o nome e o tipo do ambiente!");
-      return;
-    }
+const handleCriarAmbiente = async () => {
+  if (!novoAmbiente.nome || !novoAmbiente.tipo) {
+    alert("Informe o nome e o tipo do ambiente!");
+    return;
+  }
 
-    try {
-      const ambienteCriado = await criarAmbiente({
-        projeto: 0,
-        nome_do_ambiente: novoAmbiente.nome,
-        tipo: Number(novoAmbiente.tipo),
-      });
+  try {
+    const ambienteCriado = await criarAmbiente({
+      projeto: 0,
+      nome_do_ambiente: novoAmbiente.nome,
+      tipo: Number(novoAmbiente.tipo),
+    });
 
-      alert("Ambiente criado com sucesso!");
-      setAmbientesLista((prev) => [...prev, ambienteCriado]);
-      setNovoAmbiente({ nome: "", tipo: "" });
-      setCriandoAmbiente(false);
-    } catch (error) {
-      console.error("Erro ao criar ambiente:", error);
-      alert("Erro ao criar ambiente.");
-    }
-  };
+    // 🔧 Normaliza o retorno do backend
+    const ambienteFormatado: AmbienteInfo = {
+      id: ambienteCriado.id,
+      nome: ambienteCriado.nome_do_ambiente || novoAmbiente.nome,
+      tipo: ambienteCriado.tipo ?? Number(novoAmbiente.tipo),
+    };
+
+    // Atualiza lista corretamente
+    setAmbientesLista((prev) => [...prev, ambienteFormatado]);
+
+    alert("Ambiente criado com sucesso!");
+    setNovoAmbiente({ nome: "", tipo: "" });
+    setCriandoAmbiente(false);
+  } catch (error) {
+    console.error("Erro ao criar ambiente:", error);
+    alert("Erro ao criar ambiente.");
+  }
+};
+
 
   return (
     <div className="">
