@@ -130,8 +130,8 @@ const isSuperAdmin = () => {
       <header className="dashboard-header">
         <div className="header-logo">
           <img
-            src="/logo_jnunes_normal.png"
-            alt="Logo Jotanunes"
+            src="/logo_techflowheader.png"
+            alt="Logo"
             className="header-logo-image"
             onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
           />
