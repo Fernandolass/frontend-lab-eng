@@ -40,23 +40,21 @@ function mapProjeto(p: any): ProjetoDetalhes {
 export async function listarProjetos(
   page: number = 1,
   status?: "APROVADO" | "REPROVADO" | "PENDENTE"
-): Promise<{
-  results: ProjetoDetalhes[];
-  next: string | null;
-  previous: string | null;
-  count: number;
-}> {
+) {
   const query = new URLSearchParams();
   query.set("page", page.toString());
   if (status) query.set("status", status);
 
   const data = await apiFetch(`/api/projetos/?${query.toString()}`);
 
+  // ✅ Garante compatibilidade com backend que retorna lista direta
+  const lista = Array.isArray(data) ? data : data.results || [];
+
   return {
-    results: (data.results || []).map(mapProjeto),
-    next: data.next,
-    previous: data.previous,
-    count: data.count,
+    results: lista.map(mapProjeto),
+    next: data.next || null,
+    previous: data.previous || null,
+    count: data.count || lista.length,
   };
 }
 
@@ -135,20 +133,14 @@ export async function criarAmbiente(dados: {
     body: JSON.stringify(dados),
   });
 }
-
 export async function listarAmbientes() {
-  let url = "/api/ambientes/?disponiveis=1";
-  let todos: any[] = [];
+  const data = await apiFetch("/api/ambientes/?disponiveis=1");
 
-  while (url) {
-    const data = await apiFetch(url);
-    todos = todos.concat(data.results || []);
-    url = data.next ? data.next.replace(/^https?:\/\/[^/]+/, "") : null;
-  }
+  const lista = Array.isArray(data) ? data : data.results || [];
 
-  return todos.map((a: any) => ({
+  return lista.map((a: any) => ({
     id: a.id,
-    nome: a.nome_do_ambiente,
+    nome: a.nome_do_ambiente, // 👈 converte aqui para nome simples
     categoria: a.categoria,
     tipo: a.tipo || null,
     guia_de_cores: a.guia_de_cores || "",

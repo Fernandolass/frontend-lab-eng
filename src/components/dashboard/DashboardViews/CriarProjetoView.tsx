@@ -8,7 +8,7 @@ interface CriarProjetoViewProps {
 
 interface AmbienteInfo {
   id: number;
-  nome: string;
+  nome: string;   // 👈 volta a ser 'nome'
   categoria?: string;
   tipo?: number | null;
 }
@@ -34,9 +34,10 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
     const carregarAmbientes = async () => {
       try {
         const ambientes = await listarAmbientes();
-        // 🔹 Garante que todo ambiente sem tipo seja tratado como 1 (Área Privativa)
-        const ambientesComTipo = ambientes.map((a: AmbienteInfo) => ({
-          ...a,
+        const ambientesComTipo = ambientes.map((a: any) => ({
+          id: a.id,
+          nome: a.nome, // 👈 agora vem do listarAmbientes()
+          categoria: a.categoria,
           tipo: a.tipo ?? 1,
         }));
         setAmbientesLista(ambientesComTipo);

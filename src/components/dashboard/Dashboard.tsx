@@ -36,7 +36,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     if (path.includes('aprovados')) return 'aprovados';
     if (path.includes('reprovados')) return 'reprovados';
     if (path.includes('pendentes')) return 'pendentes';
-    if (path.includes('modelos')) return 'modelos';
     if (path.includes('logs')) return 'logs';
     return 'inicio';
   };
@@ -131,8 +130,8 @@ const isSuperAdmin = () => {
       <header className="dashboard-header">
         <div className="header-logo">
           <img
-            src="/logo_techflowheader.png" 
-            alt="Logo TechFlow"
+            src="/logo_jnunes_normal.png"
+            alt="Logo Jotanunes"
             className="header-logo-image"
             onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
           />
