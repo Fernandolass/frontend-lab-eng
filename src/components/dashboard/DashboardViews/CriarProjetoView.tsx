@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { listarAmbientes, criarProjeto, criarAmbiente } from "../../../data/projects";
-import {apiFetch} from "../../../data/api";
+import { apiFetch } from "../../../data/api";
 
 interface CriarProjetoViewProps {
   onNext: (projetoId: number) => void;
@@ -24,12 +24,22 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
   const [ambientesSelecionados, setAmbientesSelecionados] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const [novoAmbiente, setNovoAmbiente] = useState({
+    nome: "",
+    tipo: "",
+  });
+  const [criandoAmbiente, setCriandoAmbiente] = useState(false);
+
   useEffect(() => {
     const carregarAmbientes = async () => {
       try {
         const ambientes = await listarAmbientes();
-        // mostra apenas ambientes "genéricos" (sem projeto)
-        setAmbientesLista(ambientes);
+        // 🔹 Garante que todo ambiente sem tipo seja tratado como 1 (Área Privativa)
+        const ambientesComTipo = ambientes.map((a: AmbienteInfo) => ({
+          ...a,
+          tipo: a.tipo ?? 1,
+        }));
+        setAmbientesLista(ambientesComTipo);
       } catch {
         alert("Erro ao carregar ambientes");
       }
@@ -37,7 +47,9 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
     carregarAmbientes();
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -54,11 +66,15 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
     try {
       const existentes = await apiFetch(`/api/projetos/?search=${formData.nomeProjeto}`);
 
-      if (existentes.results && existentes.results.some((p: any) => p.nome_do_projeto === formData.nomeProjeto)) {
+      if (
+        existentes.results &&
+        existentes.results.some((p: any) => p.nome_do_projeto === formData.nomeProjeto)
+      ) {
         alert("Já existe um projeto com esse nome!");
         setLoading(false);
         return;
       }
+
       const projeto = await criarProjeto({
         nome_do_projeto: formData.nomeProjeto,
         tipo_do_projeto: formData.tipoProjeto,
@@ -74,6 +90,29 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
       alert("Erro ao criar projeto.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCriarAmbiente = async () => {
+    if (!novoAmbiente.nome || !novoAmbiente.tipo) {
+      alert("Informe o nome e o tipo do ambiente!");
+      return;
+    }
+
+    try {
+      const ambienteCriado = await criarAmbiente({
+        projeto: 0,
+        nome_do_ambiente: novoAmbiente.nome,
+        tipo: Number(novoAmbiente.tipo),
+      });
+
+      alert("Ambiente criado com sucesso!");
+      setAmbientesLista((prev) => [...prev, ambienteCriado]);
+      setNovoAmbiente({ nome: "", tipo: "" });
+      setCriandoAmbiente(false);
+    } catch (error) {
+      console.error("Erro ao criar ambiente:", error);
+      alert("Erro ao criar ambiente.");
     }
   };
 
@@ -139,7 +178,8 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
 
         <div className="mb-3">
           <h5>Selecione os Ambientes para este Projeto:</h5>
-          <div className="list-group">
+
+          <div className="list-group mb-3">
             {ambientesLista.map((a) => (
               <label key={a.id} className="list-group-item">
                 <input
@@ -150,11 +190,75 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
                 />
                 {a.nome}{" "}
                 <span className="text-muted">
-                  ({a.categoria || "Sem categoria"})
+                  (
+                  {a.tipo === 1
+                    ? "Área Privativa"
+                    : a.tipo === 2
+                    ? "Área Comum"
+                    : "Área Privativa"}
+                  )
                 </span>
               </label>
             ))}
           </div>
+
+          {criandoAmbiente ? (
+            <div className="border p-3 rounded bg-light mb-3">
+              <h6>Criar novo ambiente</h6>
+              <div className="row mb-2">
+                <div className="col-md-6">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Nome do ambiente"
+                    value={novoAmbiente.nome}
+                    onChange={(e) =>
+                      setNovoAmbiente({ ...novoAmbiente, nome: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="col-md-6">
+                  <select
+                    className="form-control"
+                    value={novoAmbiente.tipo}
+                    onChange={(e) =>
+                      setNovoAmbiente({ ...novoAmbiente, tipo: e.target.value })
+                    }
+                    required
+                  >
+                    <option value="">Selecione o tipo</option>
+                    <option value="1">Área Privativa</option>
+                    <option value="2">Área Comum</option>
+                  </select>
+                </div>
+              </div>
+              <div className="d-flex gap-2">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={handleCriarAmbiente}
+                >
+                  Salvar Ambiente
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setCriandoAmbiente(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary mb-3"
+              onClick={() => setCriandoAmbiente(true)}
+            >
+              Criar novo ambiente
+            </button>
+          )}
         </div>
 
         <div className="d-flex justify-content-end">
@@ -168,4 +272,3 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
 };
 
 export default CriarProjetoView;
-

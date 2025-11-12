@@ -1,5 +1,6 @@
 import { apiFetch } from "./api";
 import type { ProjetoDetalhes, Ambiente, Material } from "./mockData";
+import type { ModeloDetalhes, Secao, ItemModelo } from "./mockData";
 
 // map status BACKEND -> FRONT
 function mapStatus(s: string): "aprovado" | "reprovado" | "pendente" {
@@ -30,38 +31,32 @@ function mapProjeto(p: any): ProjetoDetalhes {
     responsavel: p.responsavel_nome || "",
     status: mapStatus(p.status),
     ambientes: (p.ambientes || []).map(mapAmbiente),
-    descricao_marcas: p.descricao_marcas || [],
+    descricao_marcas: p.materiais_com_marcas || [],
     observacoes_gerais: p.observacoes_gerais || "",
   };
 }
 
-//  agora com paginação e filtro de status
+// 🔹 agora com paginação e filtro de status
 export async function listarProjetos(
   page: number = 1,
   status?: "APROVADO" | "REPROVADO" | "PENDENTE"
-) {
+): Promise<{
+  results: ProjetoDetalhes[];
+  next: string | null;
+  previous: string | null;
+  count: number;
+}> {
   const query = new URLSearchParams();
   query.set("page", page.toString());
   if (status) query.set("status", status);
 
   const data = await apiFetch(`/api/projetos/?${query.toString()}`);
 
-  //  Se vier paginado (tem "results"), usa data.results
-  if (Array.isArray(data.results)) {
-    return {
-      results: data.results.map(mapProjeto),
-      next: data.next,
-      previous: data.previous,
-      count: data.count,
-    };
-  }
-
-  //  Se NÃO vier paginado (lista direta), converte a lista inteira
   return {
-    results: data.map(mapProjeto),
-    next: null,
-    previous: null,
-    count: data.length,
+    results: (data.results || []).map(mapProjeto),
+    next: data.next,
+    previous: data.previous,
+    count: data.count,
   };
 }
 
@@ -88,7 +83,7 @@ export async function obterProjeto(id: number): Promise<ProjetoDetalhes> {
   return {
     ...projeto,
     ambientes: ambientesComMateriais,
-    descricao_marcas: projeto.descricao_marcas || [],
+    descricao_marcas: projeto.materiais_com_marcas || [],
     observacoes_gerais: projeto.observacoes_gerais || "",
   };
 }
@@ -102,7 +97,7 @@ export async function statsDashboard() {
   }>;
 }
 
-// novo: estatísticas mensais
+// 🔹 novo: estatísticas mensais
 export async function statsMensais() {
   return apiFetch("/api/stats/mensais/") as Promise<
     Array<{
@@ -141,19 +136,22 @@ export async function criarAmbiente(dados: {
   });
 }
 
-// --- Ambientes ---
 export async function listarAmbientes() {
-  const data = await apiFetch("/api/ambientes/?disponiveis=1");
+  let url = "/api/ambientes/?disponiveis=1";
+  let todos: any[] = [];
 
-  // Aceitar tanto lista direta como paginada
-  const lista = Array.isArray(data) ? data : data.results || [];
+  while (url) {
+    const data = await apiFetch(url);
+    todos = todos.concat(data.results || []);
+    url = data.next ? data.next.replace(/^https?:\/\/[^/]+/, "") : null;
+  }
 
-  return lista.map((a: any) => ({
+  return todos.map((a: any) => ({
     id: a.id,
-    nome: a.nome_do_ambiente || a.nome || "",
-    categoria: a.categoria || "",
+    nome: a.nome_do_ambiente,
+    categoria: a.categoria,
     tipo: a.tipo || null,
-    projeto: a.projeto || null,
+    guia_de_cores: a.guia_de_cores || "",
   }));
 }
 
@@ -233,5 +231,69 @@ export async function criarUsuario(payload: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+  });
+}
+
+function mapSecao(s: any): Secao {
+  return {
+    id: s.id,
+    nome: s.nome,
+    itens: s.itens || [],
+    categoria: s.categoria || "",
+    tipo: s.tipo || null,
+    guia_de_cores: s.guia_de_cores || "",
+  };
+}
+
+function mapModelo(m: any): ModeloDetalhes {
+  return {
+    id: m.id,
+    nome: m.nome,
+    tipoModelo: m.tipo_modelo,
+    dataCriacao: new Date(m.data_criacao || m.created_at).toLocaleDateString("pt-BR"),
+    responsavel: m.responsavel || '',
+    descricao: m.descricao || '',
+    observacoes_gerais: m.observacoes_gerais || '',
+    projeto_origem_id: m.projeto_id,
+    ambientes: m.ambientes || [],
+  };
+}
+
+export async function listarModelos(): Promise<ModeloDetalhes[]> {
+  const data = await apiFetch("/api/modelos-documento/");
+  return (data.results || data).map(mapModelo);
+}
+
+export async function obterModelo(id: number): Promise<ModeloDetalhes> {
+  try {
+    console.log('🔍 Buscando modelo com ID:', id);
+    
+    const data = await apiFetch(`/api/modelos-documento/${id}/`);
+    console.log('✅ Modelo encontrado:', data);
+    
+    return mapModelo(data);
+  } catch (error) {
+    console.error('❌ Erro em obterModelo:', error);
+    throw error;
+  }
+}
+
+export async function criarModelo(projeto: ProjetoDetalhes): Promise<ModeloDetalhes> {
+  const payload = {
+    projeto: projeto.id,
+    nome: `Modelo - ${projeto.nome}`,
+    descricao: `Modelo criado a partir do projeto ${projeto.nome}`
+  };
+
+  const data = await apiFetch("/api/modelos-documento/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return mapModelo(data);
+}
+
+export async function excluirModelo(id: number): Promise<void> {
+  await apiFetch(`/api/modelos-documento/${id}/`, {
+    method: "DELETE",
   });
 }

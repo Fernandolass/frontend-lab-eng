@@ -10,6 +10,7 @@ interface Log {
   data_hora: string;
 }
 
+
 interface PaginatedLogs {
   results: Log[];
   next: string | null;

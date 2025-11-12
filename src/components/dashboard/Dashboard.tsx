@@ -6,6 +6,9 @@ import { listarProjetos } from '../../data/projects';
 import type { ProjetoDetalhes } from '../../data/mockData';
 import { DashboardRoutes } from './DashboardRoutes';
 
+
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
+
 interface DashboardProps {
   onLogout: () => void;
 }
@@ -18,6 +21,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [erro, setErro] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjetoDetalhes[]>([]);
+  const [cacheProjetos, setCacheProjetos] = useState<Record<string, ProjetoDetalhes[]>>({});
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logsCarregados, setLogsCarregados] = useState(false);
 
   const userEmail = localStorage.getItem('userEmail') || 'Usuário';
   const userName = userEmail.split('@')[0];
@@ -40,31 +46,64 @@ const isSuperAdmin = () => {
 };
   const currentView = getCurrentView();
 
-  // 🔹 Busca projetos SOMENTE quando entra em uma view de projetos
+  // Busca projetos SOMENTE quando entra em uma view de projetos
   useEffect(() => {
-    const carregarProjetos = async () => {
-      if (!['aprovados', 'reprovados', 'pendentes'].includes(currentView)) {
-        return;
-      }
-      setLoading(true);
-      try {
-        let status: "APROVADO" | "REPROVADO" | "PENDENTE" | undefined;
-        if (currentView === 'aprovados') status = "APROVADO";
-        if (currentView === 'reprovados') status = "REPROVADO";
-        if (currentView === 'pendentes') status = "PENDENTE";
+    const carregarDados = async () => {
+      // ==============================
+      // PROJETOS
+      // ==============================
+      if (['aprovados', 'reprovados', 'pendentes'].includes(currentView)) {
+        if (cacheProjetos[currentView]) {
+          setProjects(cacheProjetos[currentView]);
+          return;
+        }
 
-        const data = await listarProjetos(1, status);
-        setProjects(data.results);
-        setErro(null);
-      } catch (err) {
-        console.error('Erro ao carregar projetos:', err);
-        setErro('Não foi possível carregar os projetos.');
-      } finally {
-        setLoading(false);
+        setLoading(true);
+        try {
+          let status: "APROVADO" | "REPROVADO" | "PENDENTE" | undefined;
+          if (currentView === 'aprovados') status = "APROVADO";
+          if (currentView === 'reprovados') status = "REPROVADO";
+          if (currentView === 'pendentes') status = "PENDENTE";
+
+          const data = await listarProjetos(1, status);
+          setProjects(data.results);
+          setCacheProjetos((prev) => ({ ...prev, [currentView]: data.results }));
+          setErro(null);
+        } catch (err) {
+          console.error('Erro ao carregar projetos:', err);
+          setErro('Não foi possível carregar os projetos.');
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      // ==============================
+      // LOGS
+      // ==============================
+      else if (currentView === 'logs' && !logsCarregados) {
+        setLoading(true);
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/logs/`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          });
+          if (!response.ok) throw new Error("Erro ao carregar logs");
+
+          const data = await response.json();
+          setLogs(data.results || data);
+          setLogsCarregados(true);
+          setErro(null);
+        } catch (err) {
+          console.error('Erro ao carregar logs:', err);
+          setErro('Não foi possível carregar os logs.');
+        } finally {
+          setLoading(false);
+        }
       }
     };
 
-    carregarProjetos();
+    carregarDados();
   }, [currentView]);
 
   const handleNavigation = (path: string) => {
@@ -92,8 +131,8 @@ const isSuperAdmin = () => {
       <header className="dashboard-header">
         <div className="header-logo">
           <img
-            src="/logo_jnunes_normal.png"
-            alt="Logo Jotanunes"
+            src="/logo_techflowheader.png" 
+            alt="Logo TechFlow"
             className="header-logo-image"
             onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
           />
@@ -115,7 +154,7 @@ const isSuperAdmin = () => {
             {[
               { key: 'inicio', path: '/dashboard/inicio', label: 'Inicio' },
               { key: 'criar-projeto', path: '/dashboard/criar-projeto', label: 'Criar Projeto' },
-              { key: 'criar-usuario', path: '/dashboard/criar-usuario', label: 'Criar novo usuário' }, // <-- adicionado aqui
+              { key: 'criar-usuario', path: '/dashboard/criar-usuario', label: 'Criar Novo Usuário' }, // <-- adicionado aqui
             ].map((item) => (
               <li
                 key={item.key}
@@ -156,7 +195,6 @@ const isSuperAdmin = () => {
             </li>
               
             {[
-              { key: 'modelos', path: '/dashboard/modelos', label: 'Modelos' },
               { key: 'logs', path: '/dashboard/logs', label: 'Logs' },
             ].map((item) => (
               <li
@@ -192,6 +230,7 @@ const isSuperAdmin = () => {
           projects={projects}
           loading={loading}
           erro={erro}
+          logs={logs}
         />
       </div>
     </div>
