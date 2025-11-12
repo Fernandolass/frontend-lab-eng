@@ -1,10 +1,20 @@
 import React, { useState } from "react";
 import { apiFetch } from "../../../data/api";
+import { criarUsuario } from "../../../data/projects";
 
 interface CriarUsuarioViewProps {
   onBack: () => void;
 }
 
+async function verificarEmail(email: string) {
+  try {
+    const data = await apiFetch(`/api/usuarios-admin/?search=${email}`);
+    const results = data.results || [];
+    return results.some((u: any) => u.email.toLowerCase() === email.toLowerCase());
+  } catch {
+    return false;
+  }
+}
 const CriarUsuarioView: React.FC<CriarUsuarioViewProps> = ({ onBack }) => {
   const [formData, setFormData] = useState({
     nome: "",
@@ -22,43 +32,45 @@ const CriarUsuarioView: React.FC<CriarUsuarioViewProps> = ({ onBack }) => {
     if (erro) setErro(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setErro(null);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setErro(null);
+  const emailJaExiste = await verificarEmail(formData.email);
 
-    // Validações do frontend
-    if (formData.senha !== formData.confirmarSenha) {
-      setErro("As senhas não coincidem!");
-      setLoading(false);
-      return;
-    }
+  if (emailJaExiste) {
+    setErro("Este e-mail já está cadastrado!");
+    setLoading(false);
+    return;
+  }
 
-    if (formData.senha.length < 8) {
-      setErro("A senha deve ter pelo menos 8 caracteres!");
-      setLoading(false);
-      return;
-    }
+  if (formData.senha !== formData.confirmarSenha) {
+    setErro("As senhas não coincidem!");
+    setLoading(false);
+    return;
+  }
+
+  if (formData.senha.length < 8) {
+    setErro("A senha deve ter pelo menos 8 caracteres!");
+    setLoading(false);
+    return;
+  }
 
     try {
-      // Backend fará a verificação real de permissões
-      await apiFetch("/api/usuarios/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          nome: formData.nome,
-          email: formData.email,
-          senha: formData.senha,
-          tipo_usuario: formData.tipoUsuario,
-          ativo: true,
-        }),
+      
+      const [firstName, ...resto] = formData.nome.trim().split(" ");
+      const lastName = resto.join(" ");
+
+      await criarUsuario({
+        email: formData.email,
+        username: formData.email,
+        password: formData.senha,
+        first_name: firstName,
+        last_name: lastName,
+        cargo: formData.tipoUsuario as "atendente" | "gerente" | "superadmin",
       });
 
       alert("Usuário criado com sucesso!");
-      
-      // Limpa o formulário
       setFormData({
         nome: "",
         email: "",
@@ -66,11 +78,18 @@ const CriarUsuarioView: React.FC<CriarUsuarioViewProps> = ({ onBack }) => {
         confirmarSenha: "",
         tipoUsuario: "",
       });
-
     } catch (err: any) {
       console.error("Erro ao criar usuário:", err);
-      // O backend retornará erro se o usuário não tiver permissão
-      setErro(err.message || "Erro ao criar usuário. Verifique suas permissões.");
+
+      if (err.message.includes("email")) {
+        setErro("Este e-mail já está cadastrado.");
+      } else if (err.message.includes("password")) {
+        setErro("Senha inválida ou muito curta.");
+      } else if (err.message.includes("403")) {
+        setErro("Você não tem permissão para criar usuários (somente superadmin).");
+      } else {
+        setErro("Erro ao criar usuário. Verifique os dados e tente novamente.");
+      }
     } finally {
       setLoading(false);
     }
@@ -79,7 +98,7 @@ const CriarUsuarioView: React.FC<CriarUsuarioViewProps> = ({ onBack }) => {
   return (
     <div className="">
       <div className="content-header">
-        <h1>Criar Novo Usuário</h1>
+        <h1>Criar novo usuário</h1>
       </div>
 
       {erro && (
