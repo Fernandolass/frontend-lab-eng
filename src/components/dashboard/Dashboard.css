@@ -1,6 +1,6 @@
 /* src/components/Dashboard/Dashboard.css */
 :root {
-  --primary-color: #331bbc;
+  --primary-color: #331bbc!important;
   --primary-hover: #4a28f0;
   --secondary-color: #2B2522;
   --muted-color: #6c757d;
@@ -29,6 +29,7 @@
   margin-left: 280px;
   background-color: var(--light-bg);
   min-height: calc(100vh - 90px);
+  transition: margin-left 0.3s ease;
 }
 
 /* HEADER SUPERIOR  */
@@ -43,13 +44,21 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 2rem;
   z-index: 1000;
   box-shadow: 0 2px 15px rgba(0, 0, 0, 0.15);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .header-logo {
   display: flex;
   align-items: center;
+  gap: 1.2rem;
 }
 
  .header-logo-image {
@@ -106,6 +115,27 @@
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
+/* Botão do menu mobile */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 30px;
+  height: 21px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.menu-bar {
+  height: 3px;
+  width: 100%;
+  background-color: var(--white);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
 /* SIDEBAR E NAVEGAÇÃO */
 .dashboard-sidebar {
   width: 280px;
@@ -122,6 +152,7 @@
   border-right: 1px solid var(--border-color);
   overflow-y: auto;
   z-index: 999;
+  transition: transform 0.3s ease;
 }
 
 .sidebar-nav {
@@ -635,11 +666,11 @@ textarea.form-control {
 }
 
 .btn-secondary {
-  background: var(--muted-color);
+  background: var(--primary-hover);
 }
 
 .btn-secondary:hover {
-  background: #5a6268;
+  background: var(--hover-tertiary);
 }
 
 .btn-sm {
@@ -824,6 +855,10 @@ textarea.form-control {
   display: flex;
 }
 
+.d-md-none {
+  display: none !important;
+}
+
 .justify-content-between {
   justify-content: space-between;
 }
@@ -860,8 +895,8 @@ textarea.form-control {
   padding: 0 0.75rem;
 }
 
-/* RESPONSIVIDADEe */
-@media (max-width: 992px) {
+/* RESPONSIVIDADE */
+@media (max-width: 1199.98px) {
   .dashboard-sidebar {
     width: 240px;
   }
@@ -869,6 +904,17 @@ textarea.form-control {
   .dashboard-content {
     margin-left: 240px;
     padding: 1.5rem;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .dashboard-sidebar {
+    width: 220px;
+  }
+  
+  .dashboard-content {
+    margin-left: 220px;
+    padding: 1.25rem;
   }
   
   .dashboard-header {
@@ -892,11 +938,14 @@ textarea.form-control {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
+
   .dashboard-sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
     width: 280px;
+    transform: translateX(-100%);
   }
   
   .dashboard-sidebar.mobile-open {
@@ -907,11 +956,13 @@ textarea.form-control {
     margin-left: 0;
     width: 100%;
     padding: 1rem;
+    margin-top: 70px;
   }
   
   .dashboard-header {
-    position: relative;
-    height: 60px;
+    position: fixed;
+    height: 70px;
+    padding: 0 1rem;
   }
   
   .header-user-info {
@@ -934,13 +985,14 @@ textarea.form-control {
     margin-bottom: 0.5rem;
   }
 
-  .mobile-menu-btn {
-    display: block;
-    background: none;
-    border: none;
-    color: var(--white);
-    font-size: 1.5rem;
-    cursor: pointer;
+  .sidebar-overlay {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 998;
   }
   
   .submenu-text {
@@ -977,7 +1029,7 @@ textarea.form-control {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 575.98px) {
   .dashboard-content {
     padding: 0.75rem;
   }
@@ -1017,4 +1069,41 @@ textarea.form-control {
   .welcome-message {
     padding: 1.5rem;
   }
+  
+  .header-logo-image {
+    max-height: 45px;
+  }
+  
+  .header-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+}
+
+/* PAGINAÇÃO CUSTOMIZADA */
+.pagination .page-link {
+  color: var(--primary-color);
+  border: 1px solid var(--border-color);
+  background-color: var(--white);
+  transition: all 0.3s ease;
+}
+
+.pagination .page-link:hover {
+  color: var(--white);
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.pagination .page-item.active .page-link {
+  color: var(--white);
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.pagination .page-item.disabled .page-link {
+  color: var(--muted-color);
+  background-color: var(--light-bg);
+  border-color: var(--border-color);
+  cursor: not-allowed;
 }
