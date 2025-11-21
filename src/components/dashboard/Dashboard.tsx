@@ -186,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           </button>
           <div className="header-logo">
             <img
-              src="/logo_jnunes_normal.png"
+              src="/logo_techflowheader.png"
               alt="Logo Jotanunes"
               className="header-logo-image"
               onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
