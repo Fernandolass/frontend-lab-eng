@@ -53,8 +53,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="text-center mb-4">
           <img
             className="login-logo"
-            src="/logo_techfundopngflowESTICADO.png"
-            alt="Logo Tech Flow"
+            src="/logo_jnunes_normal.png"
+            alt="Logo JNunes"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
@@ -98,7 +98,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <label htmlFor="password">Senha</label>
             <button
               type="button"
-              className="btn btn-link position-absolute top-50 end-0 translate-middle-y text-secondary password-toggle"
+              className="btn btn-link d-flex justify-content-end position-absolute top-50 end-0 translate-middle-y text-secondary password-toggle"
               onClick={togglePasswordVisibility}
             >
               {showPassword ? "ocultar" : "mostrar"}
@@ -123,11 +123,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             )}
           </button>
 
-          <p className="text-center mt-4">
+          {/* <p className="text-center mt-4">
             <a href="#forgot" className="forgot-link">
               Esqueceu a senha?
             </a>
-          </p>
+          </p> */}
         </form>
       </div>
     </div>

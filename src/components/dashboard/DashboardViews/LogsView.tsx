@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "../../../data/api";
 
 interface Log {
@@ -9,7 +9,6 @@ interface Log {
   motivo?: string;
   data_hora: string;
 }
-
 
 interface PaginatedLogs {
   results: Log[];
@@ -24,38 +23,61 @@ const LogsView: React.FC = () => {
   const [previous, setPrevious] = useState<string | null>(null);
   const [count, setCount] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState<boolean>(true);
 
-  const carregarLogs = async (page: number = 1) => {
+  const carregarLogs = useCallback(async (pageNum: number = 1) => {
     setCarregando(true);
+    setErro(null);
     try {
-      const data = (await apiFetch(`/api/logs/?page=${page}`)) as PaginatedLogs;
+      const data = (await apiFetch(`/api/logs/?page=${pageNum}`)) as PaginatedLogs;
 
       if (Array.isArray(data)) {
-        // fallback se backend não tiver paginação
         setLogs(data);
         setNext(null);
         setPrevious(null);
         setCount(data.length);
+        setTotalPages(1);
       } else {
         setLogs(data.results || []);
         setNext(data.next);
         setPrevious(data.previous);
         setCount(data.count);
+        setTotalPages(Math.ceil(data.count / 10));
       }
 
-      setPage(page);
+      setPage(pageNum);
     } catch (e: any) {
       setErro(e.message || "Erro ao buscar logs");
     } finally {
       setCarregando(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     carregarLogs(1);
-  }, []);
+  }, [carregarLogs]);
+
+  const handleExportarLogs = useCallback(() => {
+    const csv =
+      "ID,Usuário,Ação,Projeto,Motivo,Data e Hora\n" +
+      logs
+        .map(
+          (l) =>
+            `${l.id},"${l.usuario_email}","${l.acao}","${
+              l.projeto_nome || "-"
+            }","${l.motivo || "-"}","${new Date(
+              l.data_hora
+            ).toLocaleString()}"`
+        )
+        .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `logs_${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+  }, [logs]);
 
   if (carregando) return <p>Carregando logs...</p>;
   if (erro) return <p style={{ color: "red" }}>Erro: {erro}</p>;
@@ -66,26 +88,9 @@ const LogsView: React.FC = () => {
         <h1>Logs do Sistema</h1>
         <div className="header-actions">
           <button
+            type="button"
             className="btn btn-primary"
-            onClick={() => {
-              const csv =
-                "ID,Usuário,Ação,Projeto,Motivo,Data e Hora\n" +
-                logs
-                  .map(
-                    (l) =>
-                      `${l.id},"${l.usuario_email}","${l.acao}","${
-                        l.projeto_nome || "-"
-                      }","${l.motivo || "-"}","${new Date(
-                        l.data_hora
-                      ).toLocaleString()}"`
-                  )
-                  .join("\n");
-              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-              const link = document.createElement("a");
-              link.href = URL.createObjectURL(blob);
-              link.download = `logs_${new Date().toISOString().split("T")[0]}.csv`;
-              link.click();
-            }}
+            onClick={handleExportarLogs}
           >
             Exportar Logs
           </button>
@@ -129,26 +134,38 @@ const LogsView: React.FC = () => {
         )}
       </div>
 
-      {/* 🔹 Botões de paginação */}
-      <div className="pagination d-flex justify-content-between mt-3">
-        <button
-          className="btn btn-outline-secondary"
-          onClick={() => carregarLogs(page - 1)}
-          disabled={!previous}
-        >
-          ⬅ Anterior
-        </button>
-        <span>
-          Página {page} — Total: {count}
-        </span>
-        <button
-          className="btn btn-outline-secondary"
-          onClick={() => carregarLogs(page + 1)}
-          disabled={!next}
-        >
-          Próxima ➡
-        </button>
-      </div>
+            {/* Paginação estilo Bootstrap */}
+      {count > 0 && totalPages > 1 && (
+        <nav className="mt-3">
+          <ul className="pagination justify-content-center">
+            <li className={`page-item ${page === 1 ? "disabled" : ""}`}>
+              <button
+                type="button"
+                className="page-link"
+                onClick={() => carregarLogs(page - 1)}
+                disabled={page === 1}
+              >
+                Anterior
+              </button>
+            </li>
+            <li className="page-item disabled">
+              <span className="page-link">
+                Página {page} de {totalPages}
+              </span>
+            </li>
+            <li className={`page-item ${page === totalPages ? "disabled" : ""}`}>
+              <button
+                type="button"
+                className="page-link"
+                onClick={() => carregarLogs(page + 1)}
+                disabled={page === totalPages}
+              >
+                Próxima
+              </button>
+            </li>
+          </ul>
+        </nav>
+      )}
     </div>
   );
 };

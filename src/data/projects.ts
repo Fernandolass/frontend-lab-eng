@@ -21,7 +21,6 @@ function mapAmbiente(a: any): Ambiente {
   };
 }
 
-
 function mapProjeto(p: any): ProjetoDetalhes {
   return {
     id: p.id,
@@ -40,21 +39,23 @@ function mapProjeto(p: any): ProjetoDetalhes {
 export async function listarProjetos(
   page: number = 1,
   status?: "APROVADO" | "REPROVADO" | "PENDENTE"
-) {
+): Promise<{
+  results: ProjetoDetalhes[];
+  next: string | null;
+  previous: string | null;
+  count: number;
+}> {
   const query = new URLSearchParams();
   query.set("page", page.toString());
   if (status) query.set("status", status);
 
   const data = await apiFetch(`/api/projetos/?${query.toString()}`);
 
-  // ✅ Garante compatibilidade com backend que retorna lista direta
-  const lista = Array.isArray(data) ? data : data.results || [];
-
   return {
-    results: lista.map(mapProjeto),
-    next: data.next || null,
-    previous: data.previous || null,
-    count: data.count || lista.length,
+    results: (data.results || []).map(mapProjeto),
+    next: data.next,
+    previous: data.previous,
+    count: data.count,
   };
 }
 
@@ -122,25 +123,28 @@ export async function criarProjeto(payload: {
 }
 
 export async function criarAmbiente(dados: {
-  projeto: number;
   nome_do_ambiente: string;
-  tipo?: number | null;
   categoria?: string;
-  guia_de_cores?: string;
 }) {
   return apiFetch("/api/ambientes/", {
     method: "POST",
     body: JSON.stringify(dados),
   });
 }
+
 export async function listarAmbientes() {
-  const data = await apiFetch("/api/ambientes/?disponiveis=1");
+  let url = "/api/ambientes/?disponiveis=1";
+  let todos: any[] = [];
 
-  const lista = Array.isArray(data) ? data : data.results || [];
+  while (url) {
+    const data = await apiFetch(url);
+    todos = todos.concat(data.results || []);
+    url = data.next ? data.next.replace(/^https?:\/\/[^/]+/, "") : null;
+  }
 
-  return lista.map((a: any) => ({
+  return todos.map((a: any) => ({
     id: a.id,
-    nome: a.nome_do_ambiente, // 👈 converte aqui para nome simples
+    nome: a.nome_do_ambiente,
     categoria: a.categoria,
     tipo: a.tipo || null,
     guia_de_cores: a.guia_de_cores || "",
@@ -209,6 +213,7 @@ export async function criarMaterial(payload: {
     throw err;
   }
 }
+
 
 // --- Usuários ---
 export async function criarUsuario(payload: {

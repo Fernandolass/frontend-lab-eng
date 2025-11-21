@@ -6,7 +6,6 @@ import { listarProjetos } from '../../data/projects';
 import type { ProjetoDetalhes } from '../../data/mockData';
 import { DashboardRoutes } from './DashboardRoutes';
 
-
 export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://127.0.0.1:8000";
 
 interface DashboardProps {
@@ -18,12 +17,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const location = useLocation();
   
   const [projetosMenuOpen, setProjetosMenuOpen] = useState<boolean>(false);
+  const [cadastroMenuOpen, setCadastroMenuOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [erro, setErro] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjetoDetalhes[]>([]);
   const [cacheProjetos, setCacheProjetos] = useState<Record<string, ProjetoDetalhes[]>>({});
   const [logs, setLogs] = useState<any[]>([]);
   const [logsCarregados, setLogsCarregados] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
 
   const userEmail = localStorage.getItem('userEmail') || 'Usuário';
   const userName = userEmail.split('@')[0];
@@ -37,12 +38,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     if (path.includes('reprovados')) return 'reprovados';
     if (path.includes('pendentes')) return 'pendentes';
     if (path.includes('logs')) return 'logs';
+    if (path.includes('ambiente')) return 'ambiente';
+    if (path.includes('item')) return 'item';
+    if (path.includes('marca')) return 'marca';
+    if (path.includes('material')) return 'material';
     return 'inicio';
   };
-const isSuperAdmin = () => {
-  const userRole = localStorage.getItem('userRole');
-  return userRole === 'superadmin';
-};
+
+  const isSuperAdmin = () => {
+    const userRole = localStorage.getItem('userRole');
+    return userRole === 'superadmin';
+  };
+
   const currentView = getCurrentView();
 
   // Busca projetos SOMENTE quando entra em uma view de projetos
@@ -110,6 +117,10 @@ const isSuperAdmin = () => {
     if (!path.includes('aprovados') && !path.includes('reprovados') && !path.includes('pendentes')) {
       setProjetosMenuOpen(false);
     }
+    // Fecha sidebar no mobile após navegação
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
   };
 
   const handleProjetosMenuClick = () => {
@@ -119,22 +130,68 @@ const isSuperAdmin = () => {
     }
   };
 
+  const isCadastroViewActive =
+    currentView === 'ambiente' ||
+    currentView === 'item' ||
+    currentView === 'marca' ||
+    currentView === 'material';
+
+  useEffect(() => {
+    // Sincroniza o estado do menu com a rota atual
+    setCadastroMenuOpen(isCadastroViewActive);
+  }, [isCadastroViewActive]);
+
+  const handleCadastroMenuClick = () => {
+    const newState = !cadastroMenuOpen;
+    setCadastroMenuOpen(newState);
+    if (newState) {
+      navigate('/dashboard/ambiente');
+    }
+  };
+
   const isProjetosViewActive = 
     currentView === 'aprovados' ||
     currentView === 'reprovados' ||
     currentView === 'pendentes';
 
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  // Fecha sidebar quando redimensionar para desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className="dashboard-container">
       {/* Header */}
       <header className="dashboard-header">
-        <div className="header-logo">
-          <img
-            src="/logo_jnunes_normal.png"
-            alt="Logo Jotanunes"
-            className="header-logo-image"
-            onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
-          />
+        <div className="header-left">
+          <button 
+            className="mobile-menu-btn"
+            onClick={toggleSidebar}
+            aria-label="Toggle menu"
+          >
+            <span className="menu-bar"></span>
+            <span className="menu-bar"></span>
+            <span className="menu-bar"></span>
+          </button>
+          <div className="header-logo">
+            <img
+              src="/logo_jnunes_normal.png"
+              alt="Logo Jotanunes"
+              className="header-logo-image"
+              onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
+            />
+          </div>
         </div>
 
         <div className="header-user">
@@ -146,14 +203,22 @@ const isSuperAdmin = () => {
         </div>
       </header>
 
+      {/* Overlay para mobile */}
+      {sidebarOpen && (
+        <div 
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+
       {/* Sidebar */}
-      <div className="dashboard-sidebar">
+      <div className={`dashboard-sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
         <nav className="sidebar-nav">
           <ul className="nav-menu">
             {[
               { key: 'inicio', path: '/dashboard/inicio', label: 'Inicio' },
               { key: 'criar-projeto', path: '/dashboard/criar-projeto', label: 'Criar Projeto' },
-              { key: 'criar-usuario', path: '/dashboard/criar-usuario', label: 'Criar Novo Usuário' }, // <-- adicionado aqui
+              { key: 'criar-usuario', path: '/dashboard/criar-usuario', label: 'Criar Novo Usuário' },
             ].map((item) => (
               <li
                 key={item.key}
@@ -208,6 +273,39 @@ const isSuperAdmin = () => {
                 </span>
               </li>
             ))}
+
+            <li
+              className={`nav-item ${
+                ['ambiente', 'item', 'marca', 'material'].includes(currentView) ? 'active' : ''
+              }`}
+            >
+              <div
+                className="nav-text nav-with-submenu"
+                onClick={handleCadastroMenuClick}
+              >
+                <span>Cadastros</span>
+                <span className={`submenu-arrow ${cadastroMenuOpen ? 'open' : ''}`}>▼</span>
+              </div>
+
+              {cadastroMenuOpen && (
+                <ul className="submenu">
+                  {[
+                    { key: 'ambiente', path: '/dashboard/ambiente', label: 'Ambiente' },
+                    { key: 'item', path: '/dashboard/item', label: 'Item' },
+                    { key: 'marca', path: '/dashboard/marca', label: 'Marca' },
+                    { key: 'material', path: '/dashboard/material', label: 'Material' },
+                  ].map((item) => (
+                    <li
+                      key={item.key}
+                      className={`submenu-item ${currentView === item.key ? 'active' : ''}`}
+                      onClick={() => handleNavigation(item.path)}
+                    >
+                      <span className="submenu-text">{item.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
           </ul>
         </nav>
 

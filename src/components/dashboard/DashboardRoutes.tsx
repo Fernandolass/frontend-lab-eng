@@ -13,6 +13,9 @@ import LogsView from './DashboardViews/LogsView';
 import DetalhesProjetoView from './DashboardViews/DetalhesProjetoView';
 import DetalhesModeloView from './DashboardViews/DetalhesModeloView';
 import AprovarProjetoView from './DashboardViews/AprovarProjetoView';
+import AmbienteView from './DashboardViews/CadastrarAmbienteView';
+import CadastrarMarcaView from "./DashboardViews/CadastrarMarcaView";
+import CadastrarItemView from "./DashboardViews/CadastrarItemView";
 import { criarModelo, listarModelos, excluirModelo } from "../../data/projects";
 import Loading from '../Loading';
 
@@ -25,7 +28,6 @@ interface DashboardRoutesProps {
 }
 
 export function DashboardRoutes({ onNavigate, projects, loading, erro }: DashboardRoutesProps) {
-
   const [modelos, setModelos] = useState<any[]>([]);
 
   useEffect(() => {
@@ -69,37 +71,46 @@ export function DashboardRoutes({ onNavigate, projects, loading, erro }: Dashboa
       <Route 
         path="aprovados" 
         element={
-          <AprovadosView
-            projects={projects.filter((p) => p.status === 'aprovado')}
-            onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
-          />
+        <AprovadosView
+          onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
+        />
         } 
       />
       <Route 
         path="reprovados" 
         element={
-          <ReprovadosView
-            projects={projects.filter((p) => p.status === 'reprovado')}
-            onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
-          />
+        <ReprovadosView
+          onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
+        />
         } 
       />
       <Route 
         path="pendentes" 
         element={
           <PendentesView
-            projects={projects.filter((p) => p.status === 'pendente')}
             onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
             onEditProject={(id) => onNavigate(`/dashboard/aprovar-projeto/${id}`)}
           />
         } 
       />
       <Route 
-        path="detalhes-modelo/:modeloId" 
-        element={<DetalhesModeloView onBack={() => window.history.back()} />} 
+        path="ambiente" 
+        element={<AmbienteView />}
       />
-  
+      <Route path="marca" element={<CadastrarMarcaView />} />
       <Route path="logs" element={<LogsView />} />
+      <Route 
+        path="item" 
+        element={<CadastrarItemView />}
+      />
+      <Route 
+        path="marca" 
+        element={<CadastrarMarcaView />} 
+      />
+      <Route 
+        path="logs" 
+        element={<LogsView />} 
+      />
       <Route 
         path="detalhes-projeto/:projetoId" 
         element={<DetalhesProjetoView onBack={() => window.history.back()} />} 

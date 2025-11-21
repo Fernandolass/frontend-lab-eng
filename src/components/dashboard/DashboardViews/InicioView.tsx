@@ -61,6 +61,9 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
     carregarDados();
   }, []);
 
+  // 🔹 Normaliza altura das barras
+  const maxQtd = Math.max(...monthlyData.map(m => m.qtd), 1);
+
   return (
     <div className="inicio-container">
       <div className="content-header">
@@ -149,7 +152,7 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
                       <div className="bar-wrapper">
                         <div
                           className="bar-fill"
-                          style={{ height: `${(m.qtd / 20) * 100}%` }}
+                          style={{ height: `${(m.qtd / maxQtd) * 100}%` }}
                         ></div>
                       </div>
                       <span className="bar-label">{m.mes}</span>
@@ -222,4 +225,4 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
   );
 };
 
-export default InicioView;  
+export default InicioView;

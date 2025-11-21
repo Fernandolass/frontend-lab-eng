@@ -167,9 +167,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
         // Cria um novo ambiente vinculado ao projeto criado
         const novoAmbiente = await criarAmbiente({
-          projeto: projeto.id,
           nome_do_ambiente: ambienteOriginal.nome_do_ambiente ?? ambienteOriginal.nome ?? "",
-          tipo: ambienteOriginal.tipo ?? null,
           categoria: ambienteOriginal.categoria ?? "PRIVATIVA",
         });
 
@@ -199,9 +197,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await criarAmbiente({
-        projeto: 1, // substitua pelo ID real do projeto se disponível
         nome_do_ambiente: novoAmbiente.nome_do_ambiente,
-        tipo: novoAmbiente.tipo ? Number(novoAmbiente.tipo) : null,
       });
       alert('Ambiente criado com sucesso!');
       setShowModal(false);

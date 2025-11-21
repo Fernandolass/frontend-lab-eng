@@ -14,14 +14,6 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
   const [loading, setLoading] = useState(true);
   const [sugestoes, setSugestoes] = useState<Record<string, string[]>>({});
   const [itensDisponiveis, setItensDisponiveis] = useState<Array<{ key: string; label: string }>>([]);
-  const [novoItemModal, setNovoItemModal] = useState<{ ambienteId: number | null; show: boolean }>({ 
-    ambienteId: null, 
-    show: false 
-  });
-  const [novoItemDados, setNovoItemDados] = useState({
-    nome: "",
-    descricao: ""
-  });
 
   // 🔹 Carrega projeto e monta dados locais
   useEffect(() => {
@@ -123,64 +115,6 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
     }
   };
 
-  // 🔹 Abrir modal para criar novo item
-  const abrirModalNovoItem = (ambienteId: number) => {
-    setNovoItemModal({ ambienteId, show: true });
-    setNovoItemDados({ nome: "", descricao: "" });
-  };
-
-  // 🔹 Fechar modal
-  const fecharModalNovoItem = () => {
-    setNovoItemModal({ ambienteId: null, show: false });
-    setNovoItemDados({ nome: "", descricao: "" });
-  };
-
-  // 🔹 Confirmar criação do novo item
-  const confirmarNovoItem = async () => {
-    if (!novoItemModal.ambienteId || !novoItemDados.nome.trim() || !novoItemDados.descricao.trim()) {
-      alert("Preencha o nome e a descrição do item!");
-      return;
-    }
-
-    try {
-      const novoMaterial = await criarMaterial({
-        ambiente: novoItemModal.ambienteId,
-        item: novoItemDados.nome.trim(),
-        descricao: novoItemDados.descricao.trim(),
-        marca: null,
-      });
-
-      // Atualiza a lista de materiais do ambiente
-      setMateriaisPorAmbiente((prev) => ({
-        ...prev,
-        [novoItemModal.ambienteId!]: [...(prev[novoItemModal.ambienteId!] || []), novoMaterial],
-      }));
-
-      // Atualiza sugestões
-      const ambiente = projeto.ambientes.find((amb: any) => amb.id === novoItemModal.ambienteId);
-      if (ambiente) {
-        const chave = `${ambiente.nome_do_ambiente?.toUpperCase()}__${novoItemDados.nome.toUpperCase()}`;
-        setSugestoes((prev) => ({
-          ...prev,
-          [chave]: [...(prev[chave] || []), novoItemDados.descricao.trim()],
-        }));
-      }
-
-      fecharModalNovoItem();
-      alert("Item criado com sucesso!");
-
-    } catch (err: any) {
-    console.error("Erro ao criar novo item:", err);
-    
-    // 🔹 VERIFICA SE É ERRO DE PERMISSÃO E MOSTRA AVISO AMIGÁVEL
-    if (err?.message?.includes("403") || err?.message?.includes("Forbidden") || err?.message?.includes("permissão")) {
-      alert("⚠️ Aviso: Você não tem permissão para criar novos itens.\n\nEntre em contato com o administrador do sistema para solicitar acesso.");
-    } else {
-      alert("Erro ao criar novo item. Tente novamente.");
-    }
-  }
-  };
-
   if (loading || !projeto) return <p>Carregando...</p>;
 
   return (
@@ -192,17 +126,9 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
 
       {projeto.ambientes.map((amb: any) => (
         <div key={amb.id} className="mb-5">
-          <div className="d-flex justify-content-between align-items-center mb-3 border-bottom pb-1">
-            <h4 className="fw-bold text-uppercase mb-0">
-              {amb.nome_do_ambiente || amb.nome}
-            </h4>
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => abrirModalNovoItem(amb.id)}
-            >
-              Criar Novo Item
-            </button>
-          </div>
+          <h4 className="fw-bold text-uppercase mb-3 border-bottom pb-1">
+            {amb.nome_do_ambiente || amb.nome}
+          </h4>
 
           <table className="table table-bordered align-middle">
             <thead className="table-light">
@@ -231,13 +157,11 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
                           }
                         }}
                       >
-                        <option value="">Selecione...</option>
                         {opcoes.map((desc) => (
                           <option key={desc} value={desc}>
                             {desc}
                           </option>
                         ))}
-                        <option value="_outro">Outro (escrever manualmente)</option>
                       </select>
 
                       {m.descricao === "" && (
@@ -252,63 +176,10 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
                   </tr>
                 );
               })}
-              
-              {/* Mostra mensagem se não houver itens */}
-              {(materiaisPorAmbiente[amb.id] || []).length === 0 && (
-                <tr>
-                  <td colSpan={2} className="text-center text-muted py-4">
-                    Nenhum item cadastrado para este ambiente.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
       ))}
-
-      {/* ===================== MODAL PARA CRIAR NOVO ITEM ===================== */}
-      {novoItemModal.show && (
-        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Criar Novo Item</h5>
-                <button type="button" className="btn-close" onClick={fecharModalNovoItem}></button>
-              </div>
-              <div className="modal-body">
-                <div className="mb-3">
-                  <label className="form-label">Nome do Item</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={novoItemDados.nome}
-                    onChange={(e) => setNovoItemDados(prev => ({ ...prev, nome: e.target.value }))}
-                    placeholder="Ex: Piso, Parede, Teto..."
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Descrição</label>
-                  <textarea
-                    className="form-control"
-                    rows={3}
-                    value={novoItemDados.descricao}
-                    onChange={(e) => setNovoItemDados(prev => ({ ...prev, descricao: e.target.value }))}
-                    placeholder="Descreva as especificações do item..."
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={fecharModalNovoItem}>
-                  Cancelar
-                </button>
-                <button type="button" className="btn btn-primary" onClick={confirmarNovoItem}>
-                  Adicionar Item
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ===================== DESCRIÇÃO DAS MARCAS ===================== */}
       <div className="mt-5">
@@ -338,7 +209,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
           </tbody>
         </table>
 
-        <button
+        {/* <button 
           className="btn btn-outline-primary"
           onClick={async () => {
             await apiFetch("/api/marcas-descricao/", {
@@ -354,8 +225,26 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
           }}
         >
           + Adicionar Linha
-        </button>
+        </button> */}
       </div>
+
+      {/* ===================== OBSERVAÇÕES GERAIS ===================== */}
+      {/* <div className="mt-5">
+        <h4>Observações Gerais</h4>
+        <textarea
+          className="form-control"
+          rows={5}
+          value={projeto.observacoes_gerais || ""}
+          onChange={(e) =>
+            apiFetch(`/api/projetos/${projeto.id}/`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ observacoes_gerais: e.target.value }),
+            })
+          }
+          placeholder="Digite as observações gerais..."
+        />
+      </div> */}
 
       <div className="d-flex justify-content-start mt-4">
         <button className="btn btn-secondary" onClick={onBack}>

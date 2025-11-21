@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { listarAmbientes, criarProjeto, criarAmbiente } from "../../../data/projects";
+import { listarAmbientes, criarProjeto } from "../../../data/projects";
 import { apiFetch } from "../../../data/api";
 
 interface CriarProjetoViewProps {
@@ -8,7 +8,7 @@ interface CriarProjetoViewProps {
 
 interface AmbienteInfo {
   id: number;
-  nome: string;   // 👈 volta a ser 'nome'
+  nome: string;
   categoria?: string;
   tipo?: number | null;
 }
@@ -24,11 +24,9 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
   const [ambientesSelecionados, setAmbientesSelecionados] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [novoAmbiente, setNovoAmbiente] = useState({
-    nome: "",
-    tipo: "",
-  });
-  const [criandoAmbiente, setCriandoAmbiente] = useState(false);
+  // Estados de paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // ajuste conforme necessário
 
   useEffect(() => {
     const carregarAmbientes = async () => {
@@ -36,7 +34,7 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
         const ambientes = await listarAmbientes();
         const ambientesComTipo = ambientes.map((a: any) => ({
           id: a.id,
-          nome: a.nome, // 👈 agora vem do listarAmbientes()
+          nome: a.nome,
           categoria: a.categoria,
           tipo: a.tipo ?? 1,
         }));
@@ -94,28 +92,18 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
     }
   };
 
-  const handleCriarAmbiente = async () => {
-    if (!novoAmbiente.nome || !novoAmbiente.tipo) {
-      alert("Informe o nome e o tipo do ambiente!");
-      return;
-    }
+  // Lógica de paginação
+  const totalItems = ambientesLista.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedAmbientes = ambientesLista.slice(startIndex, startIndex + itemsPerPage);
 
-    try {
-      const ambienteCriado = await criarAmbiente({
-        projeto: 0,
-        nome_do_ambiente: novoAmbiente.nome,
-        tipo: Number(novoAmbiente.tipo),
-      });
-
-      alert("Ambiente criado com sucesso!");
-      setAmbientesLista((prev) => [...prev, ambienteCriado]);
-      setNovoAmbiente({ nome: "", tipo: "" });
-      setCriandoAmbiente(false);
-    } catch (error) {
-      console.error("Erro ao criar ambiente:", error);
-      alert("Erro ao criar ambiente.");
+  // Garantir página válida caso a lista mude
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
     }
-  };
+  }, [totalPages, currentPage]);
 
   return (
     <div className="">
@@ -131,6 +119,7 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
               name="nomeProjeto"
               className="form-control"
               value={formData.nomeProjeto}
+              placeholder="Digite o nome do seu projeto"
               onChange={handleInputChange}
               required
             />
@@ -139,15 +128,15 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
             <label className="form-label">Tipo do Projeto</label>
             <select
               name="tipoProjeto"
-              className="form-control"
+              className="form-control dropdown-toggle"
               value={formData.tipoProjeto}
               onChange={handleInputChange}
               required
             >
-              <option value="">Selecione</option>
-              <option value="RESIDENCIAL">Residencial</option>
-              <option value="COMERCIAL">Comercial</option>
-              <option value="INDUSTRIAL">Industrial</option>
+              <option className="dropdown-item" value="">Selecione</option>
+              <option className="dropdown-item" value="RESIDENCIAL">Residencial</option>
+              <option className="dropdown-item" value="COMERCIAL">Comercial</option>
+              <option className="dropdown-item" value="INDUSTRIAL">Industrial</option>
             </select>
           </div>
         </div>
@@ -170,6 +159,7 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
           <label className="form-label">Descrição</label>
           <textarea
             name="descricao"
+            placeholder="Digite informações adicionais sobre o projeto"
             className="form-control"
             rows={3}
             value={formData.descricao}
@@ -181,7 +171,7 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
           <h5>Selecione os Ambientes para este Projeto:</h5>
 
           <div className="list-group mb-3">
-            {ambientesLista.map((a) => (
+            {paginatedAmbientes.map((a) => (
               <label key={a.id} className="list-group-item">
                 <input
                   type="checkbox"
@@ -203,67 +193,42 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
             ))}
           </div>
 
-          {criandoAmbiente ? (
-            <div className="border p-3 rounded bg-light mb-3">
-              <h6>Criar novo ambiente</h6>
-              <div className="row mb-2">
-                <div className="col-md-6">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Nome do ambiente"
-                    value={novoAmbiente.nome}
-                    onChange={(e) =>
-                      setNovoAmbiente({ ...novoAmbiente, nome: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className="col-md-6">
-                  <select
-                    className="form-control"
-                    value={novoAmbiente.tipo}
-                    onChange={(e) =>
-                      setNovoAmbiente({ ...novoAmbiente, tipo: e.target.value })
-                    }
-                    required
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <nav>
+              <ul className="pagination justify-content-center">
+                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                  <button
+                    type="button"   // 👈 evita submit
+                    className="page-link"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
                   >
-                    <option value="">Selecione o tipo</option>
-                    <option value="1">Área Privativa</option>
-                    <option value="2">Área Comum</option>
-                  </select>
-                </div>
-              </div>
-              <div className="d-flex gap-2">
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={handleCriarAmbiente}
-                >
-                  Salvar Ambiente
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setCriandoAmbiente(false)}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-primary mb-3"
-              onClick={() => setCriandoAmbiente(true)}
-            >
-              Criar novo ambiente
-            </button>
+                    Anterior
+                  </button>
+                </li>
+                <li className="page-item disabled">
+                  <span className="page-link">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                </li>
+                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                  <button
+                    type="button"
+                    className="page-link"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Próxima
+                  </button>
+                </li>
+              </ul>
+            </nav>
           )}
         </div>
 
         <div className="d-flex justify-content-end">
-          <button className="btn btn-primary" type="submit" disabled={loading}>
+          <button className="btn btn-primary px-4" type="submit" disabled={loading}>
             {loading ? "Criando..." : "Criar Projeto"}
           </button>
         </div>

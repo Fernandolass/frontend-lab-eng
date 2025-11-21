@@ -192,14 +192,14 @@ const handleSubmit = async (e: React.FormEvent) => {
         <div className="d-flex justify-content-between">
           <button 
             type="button" 
-            className="btn btn-secondary" 
+            className="btn btn-secondary px-4" 
             onClick={onBack}
             disabled={loading}
           >
             Voltar
           </button>
           <button 
-            className="btn btn-primary" 
+            className="btn btn-primary px-4" 
             type="submit" 
             disabled={loading}
           >

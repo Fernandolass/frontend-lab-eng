@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from 'react-router-dom';
+import { obterProjeto } from "../../../data/projects";
 
 interface DetalhesModeloViewProps {
   onBack: () => void;
@@ -17,42 +18,39 @@ const DetalhesModeloView: React.FC<DetalhesModeloViewProps> = ({ onBack }) => {
       
       try {
         setCarregando(true);
-        // Simulação de carregamento - substitua pela sua API
-        setTimeout(() => {
-          setModelo({
-            id: modeloId,
-            nome: 'Prédio 14 Andares',
-            tipoModelo: 'Residencial',
-            dataCriacao: '04/11/2023',
-            responsavel: 'Kleberson Costa',
-            descricao: 'Modelo padrão para contratos comerciais da empresa',
-            secoes: [
-              {
-                id: 1,
-                nome: 'Quarto/Suite',
-                itens: [
-                  { id: 1, item: 'Ar Condicionado', descricao: 'Infraestrutura para high wall com condensadora axial.' },
-                  { id: 2, item: 'Esquadria', descricao: 'Alumínio pintado de branco.' },
-                  { id: 3, item: 'Ferragem', descricao: 'Acabamento cromado.' },
-                  { id: 4, item: 'Inst. Comunicação', descricao: 'Pontos secos de comunicação e de antena de TV.' },
-                  { id: 5, item: 'Inst. Elétrica', descricao: 'Pontos de luz no teto, tomadas de corrente e interruptores.' },
-                  { id: 6, item: 'Parede', descricao: 'Pintura PVA látex branco sobre gesso ou massa de regularização PVA.' },
-                  { id: 7, item: 'Peitoril', descricao: 'Metálico.' },
-                  { id: 8, item: 'Piso', descricao: 'Porcelanato ou laminado.' },
-                  { id: 9, item: 'Porta', descricao: 'Porta semi-óca comum pintada / esmalte sintético.' },
-                  { id: 10, item: 'Rodapé', descricao: 'Porcelanato ou laminado, h=5cm.' },
-                  { id: 11, item: 'Soleira', descricao: 'Mármore ou granito.' },
-                  { id: 12, item: 'Teto', descricao: 'Pintura PVA látex branco sobre gesso ou massa de regularização PVA.' },
-                  { id: 13, item: 'Vidro', descricao: 'Liso incolor.' }
-                ]
-              }
-            ]
-          });
-          setCarregando(false);
-        }, 1000);
+        console.log('🔍 modeloId recebido:', modeloId);
+        
+        // 1. Buscar o modelo
+        console.log('📦 Buscando modelo...');
+        const response = await fetch(`http://127.0.0.1:8000/api/modelos-documento/${modeloId}/`, {
+          headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('accessToken'),
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const modeloData = await response.json();
+        console.log('✅ Modelo encontrado:', modeloData);
+        console.log('🔑 projeto ID:', modeloData.projeto);
+        
+        // 2. Buscar o projeto ORIGINAL
+        console.log('📦 Buscando projeto original...');
+        const projetoOriginal = await obterProjeto(modeloData.projeto);
+        console.log('✅ Projeto original:', projetoOriginal);
+        
+        setModelo(projetoOriginal);
+        
       } catch (err) {
-        console.error("Erro ao carregar modelo:", err);
-        setErro("Não foi possível carregar os detalhes do modelo.");
+        console.error("❌ Erro ao carregar modelo:", err);
+        if (err instanceof Error) {
+          setErro(`Não foi possível carregar os detalhes do modelo: ${err.message}`);
+        } else {
+          setErro("Não foi possível carregar os detalhes do modelo.");
+        }
+      } finally {
         setCarregando(false);
       }
     };
@@ -69,51 +67,69 @@ const DetalhesModeloView: React.FC<DetalhesModeloViewProps> = ({ onBack }) => {
         ← Voltar
       </button>
 
-      <h2>{modelo.nome}</h2>
+      <h2>{modelo.nome || modelo.nome_do_projeto}</h2>
 
-      <p><strong>Tipo:</strong> {modelo.tipoModelo}</p>
+      <p><strong>Tipo:</strong> {modelo.tipoProjeto || modelo.tipo_do_projeto}</p>
 
-      <p><strong>Data de Criação:</strong> {modelo.dataCriacao}</p>
+      <p>
+        <strong>Data de Entrega:</strong>{" "}
+        {(() => {
+          const data =
+            modelo.data_entrega ||
+            modelo.dataEntrega ||
+            modelo.data_criacao ||
+            modelo.dataCriacao;
 
-      <p><strong>Descrição:</strong> {modelo.descricao}</p>
+          if (!data) return "Não informada";
 
-      <p><strong>Responsável:</strong> {modelo.responsavel}</p>
+          const parsed = new Date(data);
+          return isNaN(parsed.getTime())
+            ? "Não informada"
+            : parsed.toLocaleDateString("pt-BR");
+        })()}
+      </p>
+
+      <p><strong>Descrição:</strong> {modelo.descricao || "Sem descrição"}</p>
+      <p><strong>Status:</strong> Aprovado</p>
+      <p><strong>Responsável:</strong> {modelo.responsavel_nome || modelo.responsavel || "N/A"}</p>
 
       <hr />
 
-      <h4>Seções do Modelo</h4>
-      {modelo.secoes && modelo.secoes.length > 0 ? (
-        modelo.secoes.map((secao: any) => (
-          <div key={secao.id} className="card mb-3">
+      <h4>Ambientes</h4>
+      {modelo.ambientes && modelo.ambientes.length > 0 ? (
+        modelo.ambientes.map((amb: any) => (
+          <div key={amb.id} className="card mb-3">
             <div className="card-header fw-bold">
-              {secao.nome}
+              {amb.nome_do_ambiente || amb.nome}
             </div>
             <div className="card-body">
-              {secao.itens && secao.itens.length > 0 ? (
+              {amb.materials && amb.materials.length > 0 ? (
                 <table className="table table-sm table-bordered">
                   <thead>
                     <tr>
                       <th>Item</th>
                       <th>Descrição</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {secao.itens.map((item: any) => (
-                      <tr key={item.id}>
-                        <td>{item.item}</td>
-                        <td>{item.descricao || "—"}</td>
+                    {amb.materials.map((mat: any) => (
+                      <tr key={mat.id}>
+                        <td>{mat.item_label || mat.item}</td>
+                        <td>{mat.descricao || "—"}</td>
+                        <td>{mat.status || "PENDENTE"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
-                <p className="text-muted">Nenhum item cadastrado.</p>
+                <p className="text-muted">Nenhum material cadastrado.</p>
               )}
             </div>
           </div>
         ))
       ) : (
-        <p className="text-muted">Nenhuma seção cadastrada no modelo.</p>
+        <p className="text-muted">Nenhum ambiente cadastrado.</p>
       )}
     </div>
   );

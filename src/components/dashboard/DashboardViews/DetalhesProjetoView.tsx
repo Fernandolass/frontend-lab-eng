@@ -35,12 +35,10 @@ const DetalhesProjetoView: React.FC<DetalhesProjetoViewProps> = ({ onBack }) => 
   if (!projeto) return <p>Nenhum dado encontrado.</p>;
 
   return (
-    <div className="container mt-4">
-      <button className="btn btn-secondary mb-3" onClick={onBack}>
-        ← Voltar
-      </button>
+    <div>
 
-      <h2>{projeto.nome || projeto.nome_do_projeto}</h2>
+
+      <h2 className="content-header">{projeto.nome || projeto.nome_do_projeto}</h2>
 
       <p><strong>Tipo:</strong> {projeto.tipoProjeto || projeto.tipo_do_projeto}</p>
 
@@ -71,13 +69,13 @@ const DetalhesProjetoView: React.FC<DetalhesProjetoViewProps> = ({ onBack }) => 
       <h4>Ambientes</h4>
       {projeto.ambientes && projeto.ambientes.length > 0 ? (
         projeto.ambientes.map((amb: any) => (
-          <div key={amb.id} className="card mb-3">
-            <div className="card-header fw-bold">
+          <div key={amb.id} className="projects-table-container mb-3">
+            <div className="mb-3 fw-bold">
               {amb.nome_do_ambiente || amb.nome}
             </div>
             <div className="card-body">
               {amb.materials && amb.materials.length > 0 ? (
-                <table className="table table-sm table-bordered">
+                <table className="projects-table table table-sm ">
                   <thead>
                     <tr>
                       <th>Item</th>
@@ -104,6 +102,9 @@ const DetalhesProjetoView: React.FC<DetalhesProjetoViewProps> = ({ onBack }) => 
       ) : (
         <p className="text-muted">Nenhum ambiente cadastrado.</p>
       )}
+      <button className="btn btn-secondary mb-3" onClick={onBack}>
+        ← Voltar
+      </button>
     </div>
   );
 };
