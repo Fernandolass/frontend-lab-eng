@@ -25,7 +25,6 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState<{ texto: string; tipo: 'sucesso' | 'erro' } | null>(null);
 
-  // Estados de paginação
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 

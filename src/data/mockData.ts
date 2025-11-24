@@ -37,32 +37,3 @@ export interface Material {
   aprovador?: string; 
 }
 
-export interface ModeloDetalhes {
-  id: number;
-  nome: string;
-  tipoModelo: string;
-  dataCriacao: string;
-  responsavel: string;
-  descricao: string;
-  observacoes_gerais: string;
-  projeto_origem_id: number; 
-  ambientes: Ambiente[];
-}
-
-export interface Secao {
-  id: number;
-  nome: string;
-  itens: ItemModelo[];
-  categoria?: string;
-  tipo?: number | null;
-  guia_de_cores?: string;
-}
-
-export interface ItemModelo {
-  id: string;
-  nome: string;
-  tipo: string;
-  descricao?: string;
-  observacoes?: string;
-}
-

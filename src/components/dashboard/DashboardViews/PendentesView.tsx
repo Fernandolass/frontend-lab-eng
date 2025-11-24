@@ -57,7 +57,7 @@ const PendentesView: React.FC<PendentesViewProps> = ({
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setCurrentPage(1); // resetar para página 1 ao pesquisar
+            setCurrentPage(1); 
           }}
           className="form-control"
         />

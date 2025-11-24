@@ -1,30 +1,49 @@
-import React, { useState } from "react";
-import { apiFetch } from "../../../data/api";
-import { criarUsuario } from "../../../data/projects";
+import React, { useState, useEffect } from "react";
+import { criarUsuario, listarUsuarios, atualizarUsuario, deletarUsuario } from "../../../data/projects";
 
 interface CriarUsuarioViewProps {
   onBack: () => void;
 }
 
-async function verificarEmail(email: string) {
-  try {
-    const data = await apiFetch(`/api/usuarios-admin/?search=${email}`);
-    const results = data.results || [];
-    return results.some((u: any) => u.email.toLowerCase() === email.toLowerCase());
-  } catch {
-    return false;
-  }
-}
 const CriarUsuarioView: React.FC<CriarUsuarioViewProps> = ({ onBack }) => {
   const [formData, setFormData] = useState({
+    id: 0,
     nome: "",
     email: "",
     senha: "",
     confirmarSenha: "",
     tipoUsuario: "",
   });
+  const [usuarios, setUsuarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [editando, setEditando] = useState(false);
+
+  // Estados de paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Mensagem de feedback
+  const [mensagem, setMensagem] = useState<{ texto: string; tipo: "sucesso" | "erro" } | null>(null);
+
+  const mostrarMensagem = (texto: string, tipo: "sucesso" | "erro") => {
+    setMensagem({ texto, tipo });
+    setTimeout(() => setMensagem(null), 5000);
+  };
+
+  // Carregar usuários da página atual
+  useEffect(() => {
+    async function carregarUsuarios() {
+      const data = await listarUsuarios(currentPage);
+      setUsuarios(data.results || []);
+
+      if (data.count && data.results) {
+        const pageSize = data.results.length;
+        setTotalPages(Math.ceil(data.count / pageSize));
+      }
+    }
+    carregarUsuarios();
+  }, [currentPage]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -32,78 +51,107 @@ const CriarUsuarioView: React.FC<CriarUsuarioViewProps> = ({ onBack }) => {
     if (erro) setErro(null);
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setErro(null);
-  const emailJaExiste = await verificarEmail(formData.email);
-
-  if (emailJaExiste) {
-    setErro("Este e-mail já está cadastrado!");
-    setLoading(false);
-    return;
-  }
-
-  if (formData.senha !== formData.confirmarSenha) {
-    setErro("As senhas não coincidem!");
-    setLoading(false);
-    return;
-  }
-
-  if (formData.senha.length < 8) {
-    setErro("A senha deve ter pelo menos 8 caracteres!");
-    setLoading(false);
-    return;
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErro(null);
 
     try {
-      
       const [firstName, ...resto] = formData.nome.trim().split(" ");
       const lastName = resto.join(" ");
 
-      await criarUsuario({
-        email: formData.email,
-        username: formData.email,
-        password: formData.senha,
-        first_name: firstName,
-        last_name: lastName,
-        cargo: formData.tipoUsuario as "atendente" | "gerente" | "superadmin",
-      });
+      if (editando) {
+        await atualizarUsuario(formData.id, {
+          email: formData.email,
+          username: formData.email,
+          first_name: firstName,
+          last_name: lastName,
+          cargo: formData.tipoUsuario as "atendente" | "gerente" | "superadmin",
+        });
+        mostrarMensagem("Usuário atualizado com sucesso!", "sucesso");
+      } else {
+        await criarUsuario({
+          email: formData.email,
+          username: formData.email,
+          password: formData.senha,
+          first_name: firstName,
+          last_name: lastName,
+          cargo: formData.tipoUsuario as "atendente" | "gerente" | "superadmin",
+        });
+        mostrarMensagem("Usuário criado com sucesso!", "sucesso");
+      }
 
-      alert("Usuário criado com sucesso!");
       setFormData({
+        id: 0,
         nome: "",
         email: "",
         senha: "",
         confirmarSenha: "",
         tipoUsuario: "",
       });
-    } catch (err: any) {
-      console.error("Erro ao criar usuário:", err);
+      setEditando(false);
 
-      if (err.message.includes("email")) {
-        setErro("Este e-mail já está cadastrado.");
-      } else if (err.message.includes("password")) {
-        setErro("Senha inválida ou muito curta.");
-      } else if (err.message.includes("403")) {
-        setErro("Você não tem permissão para criar usuários (somente superadmin).");
-      } else {
-        setErro("Erro ao criar usuário. Verifique os dados e tente novamente.");
-      }
+      const data = await listarUsuarios(currentPage);
+      setUsuarios(data.results || []);
+    } catch (err: any) {
+      console.error("Erro:", err);
+      mostrarMensagem("Erro ao salvar usuário.", "erro");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEdit = (usuario: any) => {
+    setFormData({
+      id: usuario.id,
+      nome: `${usuario.first_name} ${usuario.last_name}`,
+      email: usuario.email,
+      senha: "",
+      confirmarSenha: "",
+      tipoUsuario: usuario.cargo,
+    });
+    setEditando(true);
+  };
+
+  const handleCancelEdit = () => {
+    setFormData({
+      id: 0,
+      nome: "",
+      email: "",
+      senha: "",
+      confirmarSenha: "",
+      tipoUsuario: "",
+    });
+    setEditando(false);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm("Tem certeza que deseja excluir este usuário?")) {
+      await deletarUsuario(id);
+      setUsuarios((prev) => prev.filter((u) => u.id !== id));
+      mostrarMensagem("Usuário excluído com sucesso!", "sucesso");
     }
   };
 
   return (
     <div className="">
       <div className="content-header">
-        <h1>Criar novo usuário</h1>
+        <h1>{editando ? "Editar Usuário" : "Criar novo usuário"}</h1>
       </div>
 
-      {erro && (
-        <div className="alert alert-danger" role="alert">
-          {erro}
+      {/* Mensagens de feedback */}
+      {mensagem && (
+        <div
+          className={`alert ${
+            mensagem.tipo === "sucesso" ? "alert-success" : "alert-danger"
+          } alert-dismissible fade show mb-4`}
+        >
+          {mensagem.texto}
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => setMensagem(null)}
+          ></button>
         </div>
       )}
 
@@ -144,7 +192,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               className="form-control"
               value={formData.senha}
               onChange={handleInputChange}
-              required
+              required={!editando}
               placeholder="Mínimo 8 caracteres"
               minLength={6}
             />
@@ -157,7 +205,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               className="form-control"
               value={formData.confirmarSenha}
               onChange={handleInputChange}
-              required
+              required={!editando}
               placeholder="Digite a senha novamente"
               minLength={6}
             />
@@ -189,26 +237,99 @@ const handleSubmit = async (e: React.FormEvent) => {
           </div>
         </div>
 
-        <div className="d-flex justify-content-between">
-          <button 
-            type="button" 
-            className="btn btn-secondary px-4" 
-            onClick={onBack}
-            disabled={loading}
-          >
-            Voltar
-          </button>
+        <div className="d-flex justify-content-end">
+          {editando && (
+            <button
+              type="button"
+              className="btn btn-secondary me-2 px-4"
+              onClick={handleCancelEdit}
+              disabled={loading}
+            >
+              Cancelar Edição
+            </button>
+          )}
           <button 
             className="btn btn-primary px-4" 
             type="submit" 
             disabled={loading}
           >
-            {loading ? "Criando..." : "Criar Usuário"}
+            {loading 
+              ? (editando ? "Salvando..." : "Criando...") 
+              : (editando ? "Editar Usuário" : "Criar Usuário")}
           </button>
         </div>
       </form>
+      <h2 className="content-header bold">Lista de usuários</h2>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Cargo</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {usuarios.map((u) => (
+            <tr key={u.id}>
+              <td>{u.first_name} {u.last_name}</td>
+              <td>{u.email}</td>
+              <td>{u.cargo}</td>
+              <td>
+                <button className="btn btn-sm btn-primary me-2" onClick={() => handleEdit(u)}>Editar</button>
+                <button className="btn btn-sm btn-secondary" onClick={() => handleDelete(u.id)}>Excluir</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <nav>
+          <ul className="pagination justify-content-center">
+            <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+              <button 
+                className="page-link" 
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </button>
+            </li>
+            <li className="page-item disabled">
+              <span className="page-link">
+                Página {currentPage} de {totalPages}
+              </span>
+            </li>
+            <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+              <button 
+                className="page-link" 
+                onClick={() => {
+                  if (currentPage < totalPages) {
+                    setCurrentPage(prev => prev + 1);
+                  }
+                }}
+                disabled={currentPage === totalPages}
+              >
+                Próxima
+              </button>
+            </li>
+          </ul>
+        </nav>
+      )}
+
+      <button 
+        type="button" 
+        className="btn btn-secondary px-4" 
+        onClick={onBack}
+        disabled={loading}
+      >
+        Voltar
+      </button>
     </div>
   );
 };
 
 export default CriarUsuarioView;
+

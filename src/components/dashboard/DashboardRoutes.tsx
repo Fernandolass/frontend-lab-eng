@@ -26,9 +26,6 @@ interface DashboardRoutesProps {
 }
 
 export function DashboardRoutes({ onNavigate, projects, loading, erro }: DashboardRoutesProps) {
-
-
-
   if (loading) return <Loading />;
   if (erro) return <p className="error-text">{erro}</p>;
 
@@ -38,38 +35,49 @@ export function DashboardRoutes({ onNavigate, projects, loading, erro }: Dashboa
         path="inicio" 
         element={<InicioView onViewDetails={() => onNavigate('/dashboard/aprovados')} />} 
       />
+
       <Route 
         path="criar-documento" 
         element={<CriarDocumentoView onViewDetails={() => onNavigate('/dashboard/pendentes')} />} 
       />
+
       <Route 
         path="criar-projeto" 
-        element={<CriarProjetoView onNext={(id) => onNavigate(`/dashboard/especificacao/${id}`)} />} 
+        element={<CriarProjetoView onNext={(id) => onNavigate(`/dashboard/especificacao/${id}`)}/>} 
       />
+
       <Route 
         path="criar-usuario" 
         element={<CriarUsuarioView onBack={() => onNavigate('/dashboard/inicio')} />} 
       />
+
       <Route 
         path="especificacao/:projetoId" 
         element={<EspecificacaoView onBack={() => onNavigate('/dashboard/inicio')} />} 
       />
+
       <Route 
         path="aprovados" 
         element={
-        <AprovadosView
-          onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
-        />
+          <AprovadosView
+            onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
+          />
         } 
       />
+
       <Route 
         path="reprovados" 
         element={
-        <ReprovadosView
-          onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
-        />
+          <ReprovadosView
+            projects={projects.filter((p: any) => p.status === 'reprovado')}
+            onViewDetails={(id) => onNavigate(`/dashboard/detalhes-projeto/${id}`)}
+            onProjetoReenviado={(projetoId) => {
+              console.log(`Projeto ${projetoId} reenviado para aprovação`);
+            }}
+          />
         } 
       />
+
       <Route 
         path="pendentes" 
         element={
@@ -79,32 +87,17 @@ export function DashboardRoutes({ onNavigate, projects, loading, erro }: Dashboa
           />
         } 
       />
-      <Route 
-        path="ambiente" 
-        element={<AmbienteView />}
-      />
+      <Route path="ambiente" element={<AmbienteView />} />
       <Route path="marca" element={<CadastrarMarcaView />} />
+      <Route path="item" element={<CadastrarItemView />} />
+      <Route path="material" element={<CadastrarMaterialView />} />
       <Route path="logs" element={<LogsView />} />
-      <Route 
-        path="item" 
-        element={<CadastrarItemView />}
-      />
-      <Route 
-        path="marca" 
-        element={<CadastrarMarcaView />} 
-      />
-      <Route 
-        path="material" 
-        element={<CadastrarMaterialView />} 
-      />
-      <Route 
-        path="logs" 
-        element={<LogsView />} 
-      />
+
       <Route 
         path="detalhes-projeto/:projetoId" 
         element={<DetalhesProjetoView onBack={() => window.history.back()} />} 
       />
+
       <Route 
         path="aprovar-projeto/:projetoId" 
         element={<AprovarProjetoView onBack={() => window.history.back()} />} 
