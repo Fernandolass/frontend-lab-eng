@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ProjetoDetalhes } from '../../../data/mockData';
 import { listarProjetos } from '../../../data/projects';
-import { downloadPDFProjeto } from '../../../data/api';
 
 interface AprovadosViewProps {
   onViewDetails: (projetoId: number) => void;
@@ -11,7 +10,6 @@ const AprovadosView: React.FC<AprovadosViewProps> = ({ onViewDetails }) => {
   const [projects, setProjects] = useState<ProjetoDetalhes[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [baixandoIds, setBaixandoIds] = useState<number[]>([]);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -32,28 +30,6 @@ const AprovadosView: React.FC<AprovadosViewProps> = ({ onViewDetails }) => {
     fetchData();
   }, []);
 
-  const handleDownload = async (projetoId: number, projetoNome: string) => {
-    try {
-      setBaixandoIds(prev => [...prev, projetoId]);
-      
-      // ✅ Use a função centralizada do api.ts
-      await downloadPDFProjeto(projetoId, projetoNome);
-      
-      console.log('✅ PDF baixado com sucesso!');
-      
-    } catch (error: any) {
-      console.error('❌ Erro ao baixar PDF:', error);
-      
-      if (error.message.includes('404')) {
-        alert('❌ Endpoint de PDF não encontrado.');
-      } else {
-        alert('❌ Erro ao baixar PDF: ' + error.message);
-      }
-      
-    } finally {
-      setBaixandoIds(prev => prev.filter(id => id !== projetoId));
-    }
-  };
 
   const filteredProjects = projects.filter(project =>
     project.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -99,7 +75,6 @@ const AprovadosView: React.FC<AprovadosViewProps> = ({ onViewDetails }) => {
           </thead>
           <tbody>
             {paginatedProjects.map(project => {
-              const estaBaixando = baixandoIds.includes(project.id);
               
               return (
                 <tr key={project.id} className="project-row">
@@ -118,20 +93,6 @@ const AprovadosView: React.FC<AprovadosViewProps> = ({ onViewDetails }) => {
                         onClick={() => onViewDetails(project.id)}
                       >
                         Ver Detalhes
-                      </button>
-                      <button 
-                        className="btn btn-secondary"
-                        onClick={() => handleDownload(project.id, project.nome)}
-                        disabled={estaBaixando}
-                      >
-                        {estaBaixando ? (
-                          <>
-                            <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                            Gerando PDF...
-                          </>
-                        ) : (
-                          'Download PDF'
-                        )}
                       </button>
                     </div>
                   </td>

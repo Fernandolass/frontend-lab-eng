@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiFetch } from "../../../data/api";
-import { obterProjeto, criarMaterial } from "../../../data/projects";
+import { obterProjeto} from "../../../data/projects";
 
 interface EspecificacaoViewProps {
   onBack: () => void;
@@ -13,7 +13,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
   const [materiaisPorAmbiente, setMateriaisPorAmbiente] = useState<Record<number, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [sugestoes, setSugestoes] = useState<Record<string, string[]>>({});
-  const [itensDisponiveis, setItensDisponiveis] = useState<Array<{ key: string; label: string }>>([]);
+
 
   // 🔹 Carrega projeto e monta dados locais
   useEffect(() => {
@@ -41,7 +41,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
             // 🔑 chave única ambiente + item
             const chave = `${amb.nome_do_ambiente?.toUpperCase()}__${itemKey}`;
 
-            itensUnicos[chave] = `${amb.nome_do_ambiente} - ${m.item_label || itemKey}`;
+            itensUnicos[chave] = `${amb.nome_do_ambiente} - ${m.item || itemKey}`;
             if (!agrupado[chave]) agrupado[chave] = new Set();
 
             if (m.descricao) agrupado[chave].add(m.descricao.trim());
@@ -54,16 +54,10 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
           limpo[key] = Array.from(agrupado[key]);
         });
 
-        const itensArr = Object.keys(itensUnicos).map((k) => ({
-          key: k,
-          label: itensUnicos[k],
-        }));
-
         // 🔹 Atualiza estados
         setProjeto(proj);
         setMateriaisPorAmbiente(materiais);
         setSugestoes(limpo);
-        setItensDisponiveis(itensArr);
 
       } catch (err) {
         console.error("Erro ao carregar especificação:", err);
@@ -97,23 +91,6 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
   };
 
   // 🔹 Cria novo material se não existir
-  const handleCriar = async (ambienteId: number, item: string, descricao: string) => {
-    if (!descricao) return;
-    try {
-      const novo = await criarMaterial({
-        ambiente: ambienteId,
-        item,
-        descricao,
-        marca: null,
-      });
-      setMateriaisPorAmbiente((prev) => ({
-        ...prev,
-        [ambienteId]: [...(prev[ambienteId] || []), novo],
-      }));
-    } catch (err) {
-      console.error("Erro ao criar material:", err);
-    }
-  };
 
   if (loading || !projeto) return <p>Carregando...</p>;
 
@@ -143,7 +120,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
                 const opcoes = sugestoes[chave] || [];
                 return (
                   <tr key={m.id}>
-                    <td className="fw-semibold">{m.item_label}</td>
+                    <td className="fw-semibold">{m.item}</td>
                     <td>
                       <select
                         className="form-select"
@@ -157,18 +134,20 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
                           }
                         }}
                       >
+                        <option value="">Selecione...</option>
                         {opcoes.map((desc) => (
                           <option key={desc} value={desc}>
                             {desc}
                           </option>
                         ))}
+                        <option value="_outro">Outro (escrever manualmente)</option>
                       </select>
 
                       {m.descricao === "" && (
                         <input
                           type="text"
                           className="form-control mt-2"
-                          placeholder={`Descreva o ${m.item_label.toLowerCase()}...`}
+                          placeholder={`Descreva o ${m.item.toLowerCase()}...`}
                           onBlur={(e) => handleChange(amb.id, m.id, e.target.value)}
                         />
                       )}

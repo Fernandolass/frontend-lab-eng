@@ -23,10 +23,11 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
   const [ambientesLista, setAmbientesLista] = useState<AmbienteInfo[]>([]);
   const [ambientesSelecionados, setAmbientesSelecionados] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
+  const [mensagem, setMensagem] = useState<{ texto: string; tipo: 'sucesso' | 'erro' } | null>(null);
 
   // Estados de paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // ajuste conforme necessário
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const carregarAmbientes = async () => {
@@ -40,11 +41,16 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
         }));
         setAmbientesLista(ambientesComTipo);
       } catch {
-        alert("Erro ao carregar ambientes");
+        mostrarMensagem("Erro ao carregar ambientes", "erro");
       }
     };
     carregarAmbientes();
   }, []);
+
+  const mostrarMensagem = (texto: string, tipo: 'sucesso' | 'erro') => {
+    setMensagem({ texto, tipo });
+    setTimeout(() => setMensagem(null), 5000);
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -61,6 +67,23 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validações
+    if (!formData.nomeProjeto.trim()) {
+      mostrarMensagem("Preencha o nome do projeto!", "erro");
+      return;
+    }
+
+    if (!formData.tipoProjeto) {
+      mostrarMensagem("Selecione o tipo do projeto!", "erro");
+      return;
+    }
+
+    if (!formData.dataEntrega) {
+      mostrarMensagem("Selecione a data de entrega!", "erro");
+      return;
+    }
+
     setLoading(true);
     try {
       const existentes = await apiFetch(`/api/projetos/?search=${formData.nomeProjeto}`);
@@ -69,7 +92,7 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
         existentes.results &&
         existentes.results.some((p: any) => p.nome_do_projeto === formData.nomeProjeto)
       ) {
-        alert("Já existe um projeto com esse nome!");
+        mostrarMensagem("Já existe um projeto com esse nome!", "erro");
         setLoading(false);
         return;
       }
@@ -82,11 +105,26 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
         ambientes_ids: ambientesSelecionados,
       });
 
-      alert("Projeto criado com sucesso!");
-      onNext(projeto.id);
+      mostrarMensagem("Projeto criado com sucesso!", "sucesso");
+      setTimeout(() => {
+        onNext(projeto.id);
+      }, 1500);
+
     } catch (err: any) {
       console.error("Erro ao criar projeto:", err);
-      alert("Erro ao criar projeto.");
+      
+      let errorMessage = "Erro ao criar projeto";
+      
+      if (err?.message?.includes("403") || err?.message?.includes("Forbidden")) {
+        errorMessage = "Você não tem permissão para criar projetos. Entre em contato com o administrador.";
+      } else if (err?.message) {
+        const shortMessage = err.message.length > 100 
+          ? err.message.substring(0, 100) + "..." 
+          : err.message;
+        errorMessage = `Erro: ${shortMessage}`;
+      }
+      
+      mostrarMensagem(errorMessage, "erro");
     } finally {
       setLoading(false);
     }
@@ -110,6 +148,15 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
       <div className="content-header">
         <h1>Criar novo projeto</h1>
       </div>
+
+       {/* Mensagens de feedback */}
+      {mensagem && (
+        <div className={`alert ${mensagem.tipo === 'sucesso' ? 'alert-success' : 'alert-danger'} alert-dismissible fade show mb-4`}>
+          {mensagem.texto}
+          <button type="button" className="btn-close" onClick={() => setMensagem(null)}></button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
         <div className="row mb-3">
           <div className="col-md-6">
@@ -228,10 +275,21 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext }) => {
         </div>
 
         <div className="d-flex justify-content-end">
-          <button className="btn btn-primary px-4" type="submit" disabled={loading}>
-            {loading ? "Criando..." : "Criar Projeto"}
-          </button>
-        </div>
+              <button 
+                className="btn btn-primary px-4" 
+                type="submit" 
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Criando...
+                  </>
+                ) : (
+                  "Criar Projeto"
+                )}
+              </button>
+            </div>
       </form>
     </div>
   );

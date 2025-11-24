@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import "./Login.css";
-import { login as apiLogin } from "../../data/api"; // ajuste o caminho conforme sua estrutura
 
 interface LoginProps {
   onLogin: (email: string, password: string) => void;
@@ -27,9 +26,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         throw new Error("Por favor, insira um email válido");
       }
 
-      // 🔹 Chama a função de login do api.ts
-      const data = await apiLogin(email, password);
-
       // Salva token no localStorage (já salvo em api.ts, mas deixei userEmail aqui)
       localStorage.setItem("userEmail", email);
 
@@ -54,7 +50,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <img
             className="login-logo"
             src="/logo_techfundopngflowESTICADO.png"
-            alt="Logo"
+            alt="Logo JNunes"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}

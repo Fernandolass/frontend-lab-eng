@@ -1,5 +1,4 @@
 // src/components/dashboard/DashboardRoutes.tsx
-import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import InicioView from './DashboardViews/InicioView';
 import CriarDocumentoView from './DashboardViews/CriarDocumentoView';
@@ -11,12 +10,11 @@ import ReprovadosView from './DashboardViews/ReprovadosView';
 import PendentesView from './DashboardViews/PendentesView';
 import LogsView from './DashboardViews/LogsView';
 import DetalhesProjetoView from './DashboardViews/DetalhesProjetoView';
-import DetalhesModeloView from './DashboardViews/DetalhesModeloView';
 import AprovarProjetoView from './DashboardViews/AprovarProjetoView';
 import AmbienteView from './DashboardViews/CadastrarAmbienteView';
 import CadastrarMarcaView from "./DashboardViews/CadastrarMarcaView";
 import CadastrarItemView from "./DashboardViews/CadastrarItemView";
-import { criarModelo, listarModelos, excluirModelo } from "../../data/projects";
+import CadastrarMaterialView from "./DashboardViews/CadastrarMaterialView";
 import Loading from '../Loading';
 
 interface DashboardRoutesProps {
@@ -28,20 +26,8 @@ interface DashboardRoutesProps {
 }
 
 export function DashboardRoutes({ onNavigate, projects, loading, erro }: DashboardRoutesProps) {
-  const [modelos, setModelos] = useState<any[]>([]);
 
-  useEffect(() => {
-    const carregarModelos = async () => {
-      try {
-        const modelosDoBackend = await listarModelos();
-        setModelos(modelosDoBackend);
-      } catch (error) {
-        console.error('Erro ao carregar modelos:', error);
-      }
-    };
 
-    carregarModelos();
-  }, []); 
 
   if (loading) return <Loading />;
   if (erro) return <p className="error-text">{erro}</p>;
@@ -106,6 +92,10 @@ export function DashboardRoutes({ onNavigate, projects, loading, erro }: Dashboa
       <Route 
         path="marca" 
         element={<CadastrarMarcaView />} 
+      />
+      <Route 
+        path="material" 
+        element={<CadastrarMaterialView />} 
       />
       <Route 
         path="logs" 
