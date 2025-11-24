@@ -28,8 +28,6 @@ const CriarDocumentoView: React.FC<CriarDocumentoViewProps> = ({ onViewDetails }
   const [tiposAmbiente, setTiposAmbiente] = useState<Array<{ id: number; nome: string }>>([]);
   const [ambientesLista, setAmbientesLista] = useState<AmbienteInfo[]>([]);
   const [novoTipo, setNovoTipo] = useState("");
-
-  // Estado do modal de novo ambiente
   const [showModal, setShowModal] = useState(false);
   const [novoAmbiente, setNovoAmbiente] = useState({
     nome_do_ambiente: '',
@@ -39,7 +37,6 @@ const CriarDocumentoView: React.FC<CriarDocumentoViewProps> = ({ onViewDetails }
   useEffect(() => {
     const carregarDados = async () => {
       try {
-        // Evita chamadas sem token ou antes da autenticação
         const token = localStorage.getItem("accessToken");
         if (!token) return;
 
@@ -53,9 +50,7 @@ const CriarDocumentoView: React.FC<CriarDocumentoViewProps> = ({ onViewDetails }
     };
     carregarDados();
   }, []);
-  // === Persistência local: salva alterações de materiais entre F5 ===
 
-  // Carrega os dados salvos no localStorage quando o componente monta
   useEffect(() => {
     const salvo = localStorage.getItem("materiaisPorAmbiente");
     if (salvo) {
@@ -67,7 +62,6 @@ const CriarDocumentoView: React.FC<CriarDocumentoViewProps> = ({ onViewDetails }
     }
   }, []);
 
-  // Sempre que o usuário alterar algum material, salva no localStorage
   useEffect(() => {
     localStorage.setItem("materiaisPorAmbiente", JSON.stringify(materiaisPorAmbiente));
   }, [materiaisPorAmbiente]);
@@ -75,7 +69,6 @@ const CriarDocumentoView: React.FC<CriarDocumentoViewProps> = ({ onViewDetails }
     try {
       const data = await apiFetch("/api/materiais/");
 
-      // Agrupa descrições únicas por item (PISO, PAREDE, etc.)
       const agrupado: Record<string, Set<string>> = {};
 
       data.forEach((m: any) => {
@@ -86,7 +79,6 @@ const CriarDocumentoView: React.FC<CriarDocumentoViewProps> = ({ onViewDetails }
         }
       });
 
-      // Converte Sets em arrays e remove duplicações
       const limpo: Record<string, string[]> = {};
       Object.keys(agrupado).forEach((key) => {
         limpo[key] = Array.from(agrupado[key]);
@@ -109,14 +101,12 @@ const CriarDocumentoView: React.FC<CriarDocumentoViewProps> = ({ onViewDetails }
 const handleAmbienteFilterChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
   const novoAmbienteId = e.target.value;
 
-  // Se não tiver ambiente selecionado, limpa e retorna
   if (!novoAmbienteId || novoAmbienteId === "undefined" || novoAmbienteId === "null") {
     setAmbienteFiltro("");
     setMateriaisAmbiente([]);
     return;
   }
 
-  // Salva o anterior no cache
   if (ambienteFiltro && materiaisAmbiente.length > 0) {
     setMateriaisPorAmbiente((prev) => ({
       ...prev,
@@ -126,14 +116,12 @@ const handleAmbienteFilterChange = async (e: React.ChangeEvent<HTMLSelectElement
 
   setAmbienteFiltro(novoAmbienteId);
 
-  // Se já temos no cache, usa
   if (materiaisPorAmbiente[novoAmbienteId]) {
     setMateriaisAmbiente(materiaisPorAmbiente[novoAmbienteId]);
     return;
   }
 
   try {
-    // Só busca se for ID válido (número real)
     if (!isNaN(Number(novoAmbienteId))) {
       const data = await apiFetch(`/api/materiais/?ambiente=${novoAmbienteId}`);
       setMateriaisPorAmbiente((prev) => ({ ...prev, [novoAmbienteId]: data }));
@@ -150,7 +138,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      // 1️⃣ Cria o projeto principal
+      // Cria o projeto principal
       const projeto = await criarProjeto({
         nome_do_projeto: formData.nomeProjeto,
         tipo_do_projeto: formData.tipoProjeto,
@@ -158,7 +146,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         descricao: formData.descricao,
       });
 
-      // 2️⃣ Pega todos os ambientes que o usuário interagiu/alterou
+      // Pega todos os ambientes que o usuário interagiu/alterou
       const ambientesSelecionados = Object.keys(materiaisPorAmbiente);
 
       for (const ambienteId of ambientesSelecionados) {
@@ -179,7 +167,6 @@ const handleSubmit = async (e: React.FormEvent) => {
             item: m.item,
             descricao: m.descricao || "",
             marca: m.marca || null,
-            // ⚠️ Não enviar "status" — backend define automaticamente como PENDENTE
           });
         }
       }

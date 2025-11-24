@@ -1,8 +1,5 @@
 import { apiFetch } from "./api";
 import type { ProjetoDetalhes, Ambiente, Material } from "./mockData";
-import type { ModeloDetalhes, Secao, ItemModelo } from "./mockData";
-
-// map status BACKEND -> FRONT
 function mapStatus(s: string): "aprovado" | "reprovado" | "pendente" {
   const x = s.toLowerCase();
   if (x.includes("aprovado")) return "aprovado";
@@ -35,7 +32,6 @@ function mapProjeto(p: any): ProjetoDetalhes {
   };
 }
 
-// 🔹 agora com paginação e filtro de status
 export async function listarProjetos(
   page: number = 1,
   status?: "APROVADO" | "REPROVADO" | "PENDENTE"
@@ -60,10 +56,8 @@ export async function listarProjetos(
 }
 
 export async function obterProjeto(id: number): Promise<ProjetoDetalhes> {
-  // Busca os dados básicos do projeto
   const projeto = await apiFetch(`/api/projetos/${id}/`);
 
-  // Para cada ambiente do projeto, busca seus materiais específicos
   const ambientesComMateriais = await Promise.all(
     (projeto.ambientes || []).map(async (amb: any) => {
       try {
@@ -78,7 +72,6 @@ export async function obterProjeto(id: number): Promise<ProjetoDetalhes> {
     })
   );
 
-  // Retorna o projeto completo com materiais
   return {
     ...projeto,
     ambientes: ambientesComMateriais,
@@ -96,11 +89,10 @@ export async function statsDashboard() {
   }>;
 }
 
-// 🔹 novo: estatísticas mensais
 export async function statsMensais() {
   return apiFetch("/api/stats/mensais/") as Promise<
     Array<{
-      mes: string; // exemplo: "2025-10"
+      mes: string; 
       APROVADO: number;
       REPROVADO: number;
       PENDENTE: number;
@@ -214,7 +206,6 @@ export async function criarMaterial(payload: {
   }
 }
 
-
 // --- Usuários ---
 export async function criarUsuario(payload: {
   email: string;
@@ -231,66 +222,42 @@ export async function criarUsuario(payload: {
   });
 }
 
-function mapSecao(s: any): Secao {
-  return {
-    id: s.id,
-    nome: s.nome,
-    itens: s.itens || [],
-    categoria: s.categoria || "",
-    tipo: s.tipo || null,
-    guia_de_cores: s.guia_de_cores || "",
-  };
+// Listar usuários com paginação
+export async function listarUsuarios(page: number = 1) {
+  return apiFetch(`/api/usuarios-admin/?page=${page}`, {
+    method: "GET",
+  });
 }
 
-function mapModelo(m: any): ModeloDetalhes {
-  return {
-    id: m.id,
-    nome: m.nome,
-    tipoModelo: m.tipo_modelo,
-    dataCriacao: new Date(m.data_criacao || m.created_at).toLocaleDateString("pt-BR"),
-    responsavel: m.responsavel || '',
-    descricao: m.descricao || '',
-    observacoes_gerais: m.observacoes_gerais || '',
-    projeto_origem_id: m.projeto_id,
-    ambientes: m.ambientes || [],
-  };
+// Obter usuário por ID
+export async function obterUsuario(id: number) {
+  return apiFetch(`/api/usuarios-admin/${id}/`, {
+    method: "GET",
+  });
 }
 
-export async function listarModelos(): Promise<ModeloDetalhes[]> {
-  const data = await apiFetch("/api/modelos-documento/");
-  return (data.results || data).map(mapModelo);
-}
-
-export async function obterModelo(id: number): Promise<ModeloDetalhes> {
-  try {
-    console.log('🔍 Buscando modelo com ID:', id);
-    
-    const data = await apiFetch(`/api/modelos-documento/${id}/`);
-    console.log('✅ Modelo encontrado:', data);
-    
-    return mapModelo(data);
-  } catch (error) {
-    console.error('❌ Erro em obterModelo:', error);
-    throw error;
-  }
-}
-
-export async function criarModelo(projeto: ProjetoDetalhes): Promise<ModeloDetalhes> {
-  const payload = {
-    projeto: projeto.id,
-    nome: `Modelo - ${projeto.nome}`,
-    descricao: `Modelo criado a partir do projeto ${projeto.nome}`
-  };
-
-  const data = await apiFetch("/api/modelos-documento/", {
-    method: "POST",
+// Atualizar usuário
+export async function atualizarUsuario(
+  id: number,
+  payload: Partial<{
+    email: string;
+    username: string;
+    password: string;
+    first_name?: string;
+    last_name?: string;
+    cargo: "atendente" | "gerente" | "superadmin";
+  }>
+) {
+  return apiFetch(`/api/usuarios-admin/${id}/`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return mapModelo(data);
 }
 
-export async function excluirModelo(id: number): Promise<void> {
-  await apiFetch(`/api/modelos-documento/${id}/`, {
+// Deletar usuário
+export async function deletarUsuario(id: number) {
+  return apiFetch(`/api/usuarios-admin/${id}/`, {
     method: "DELETE",
   });
 }

@@ -52,12 +52,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
   const currentView = getCurrentView();
 
-  // Busca projetos SOMENTE quando entra em uma view de projetos
   useEffect(() => {
     const carregarDados = async () => {
-      // ==============================
-      // PROJETOS
-      // ==============================
       if (['aprovados', 'reprovados', 'pendentes'].includes(currentView)) {
         if (cacheProjetos[currentView]) {
           setProjects(cacheProjetos[currentView]);
@@ -82,10 +78,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           setLoading(false);
         }
       }
-
-      // ==============================
-      // LOGS
-      // ==============================
       else if (currentView === 'logs' && !logsCarregados) {
         setLoading(true);
         try {

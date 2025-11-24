@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { listarAmbientes, criarMaterial } from "../../../data/projects";
-import { Ambiente } from "../../../data/mockData";
 
 interface NovoItem {
   nome: string;

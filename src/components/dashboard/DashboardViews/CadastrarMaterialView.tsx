@@ -50,7 +50,6 @@ const CadastrarMaterialView: React.FC = () => {
   const [carregandoAmbientes, setCarregandoAmbientes] = useState(true);
   const [mensagem, setMensagem] = useState<{ texto: string; tipo: 'sucesso' | 'erro' } | null>(null);
 
-  // Estados de paginação
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -63,7 +62,7 @@ const CadastrarMaterialView: React.FC = () => {
   const mapearAmbienteAPI = (ambientesAPI: AmbienteAPI[]): Ambiente[] => {
     return ambientesAPI.map(amb => ({
       id: amb.id,
-      nome_do_ambiente: amb.nome, // Mapeia 'nome' para 'nome_do_ambiente'
+      nome_do_ambiente: amb.nome, 
       categoria: amb.categoria,
       tipo: amb.tipo,
       guia_de_cores: amb.guia_de_cores
@@ -88,7 +87,7 @@ const CadastrarMaterialView: React.FC = () => {
   useEffect(() => {
     if (pesquisaMaterial.trim() === "") {
       setMateriaisFiltrados(materiais);
-      setCurrentPage(1); // Reset para primeira página quando limpa a pesquisa
+      setCurrentPage(1); 
     } else {
       const termoPesquisa = pesquisaMaterial.toLowerCase().trim();
       const filtrados = materiais.filter(material => {
@@ -103,7 +102,7 @@ const CadastrarMaterialView: React.FC = () => {
                nomeAmbiente.includes(termoPesquisa);
       });
       setMateriaisFiltrados(filtrados);
-      setCurrentPage(1); // Vai para primeira página ao pesquisar
+      setCurrentPage(1); 
     }
   }, [pesquisaMaterial, materiais, ambientes]);
 
@@ -113,7 +112,6 @@ const CadastrarMaterialView: React.FC = () => {
       let todosMateriais: Material[] = [];
       let nextUrl: string | null = "/api/materiais/";
 
-      // Loop para buscar todas as páginas
       while (nextUrl) {
         const response: MaterialAPIResponse = await apiFetch(nextUrl);
         
@@ -121,11 +119,9 @@ const CadastrarMaterialView: React.FC = () => {
         let nextPageUrl: string | null = null;
         
         if (Array.isArray(response)) {
-          // Se a resposta for diretamente um array
           materiaisDaPagina = response;
           nextPageUrl = null;
         } else if (response && typeof response === 'object' && Array.isArray(response.results)) {
-          // Se a resposta for um objeto com propriedade results
           materiaisDaPagina = response.results;
           nextPageUrl = response.next ? response.next.replace(/^.*\/\/[^/]+/, '') : null;
         } else {
@@ -136,7 +132,6 @@ const CadastrarMaterialView: React.FC = () => {
         todosMateriais = [...todosMateriais, ...materiaisDaPagina];
         nextUrl = nextPageUrl;
         
-        // Limite de segurança
         if (todosMateriais.length >= 1000) {
           console.warn("⚠️ Limite de 1000 materiais atingido");
           break;
@@ -151,7 +146,6 @@ const CadastrarMaterialView: React.FC = () => {
     }
   };
 
-  // CARREGA AMBIENTES EXISTENTES
   useEffect(() => {
     const carregarAmbientes = async () => {
       try {
@@ -159,11 +153,9 @@ const CadastrarMaterialView: React.FC = () => {
         const ambientesData = await listarAmbientes();
         console.log("Ambientes carregados:", ambientesData);
         
-        // Mapeia os dados da API para a interface Ambiente
         const ambientesMapeados = mapearAmbienteAPI(ambientesData);
         setAmbientes(ambientesMapeados);
         
-        // Seleciona o primeiro ambiente por padrão
         if (ambientesMapeados.length > 0) {
           setAmbienteSelecionado(ambientesMapeados[0].id.toString());
         }
@@ -177,13 +169,11 @@ const CadastrarMaterialView: React.FC = () => {
     carregarAmbientes();
   }, []);
 
-  // CARREGA TODOS OS MATERIAIS EXISTENTES (com todas as páginas)
   useEffect(() => {
     const carregarMateriais = async () => {
       try {
         setCarregando(true);
         
-        // Usa a nova função para carregar todos os materiais
         const todosMateriais = await carregarTodosMateriais();
         setMateriais(todosMateriais);
         setMateriaisFiltrados(todosMateriais);
@@ -198,13 +188,11 @@ const CadastrarMaterialView: React.FC = () => {
     carregarMateriais();
   }, []);
 
-  // CARREGA ITENS DISPONÍVEIS (para o dropdown) - Versão melhorada
   useEffect(() => {
     const carregarItens = async () => {
       try {
         setCarregandoItens(true);
         
-        // Tenta buscar itens da API com paginação completa
         let todosItensAPI: any[] = [];
         let nextUrl: string | null = "/api/itens/";
         
@@ -233,7 +221,6 @@ const CadastrarMaterialView: React.FC = () => {
           setItensDisponiveis(todosItensAPI);
           setItensFiltrados(todosItensAPI);
         } else {
-          // Fallback: Extrai itens únicos dos materiais carregados
           const todosItens = materiais.map(m => m.item).filter(item => item);
           const itensUnicos = todosItens.filter((item, index) => 
             todosItens.indexOf(item) === index
@@ -249,7 +236,6 @@ const CadastrarMaterialView: React.FC = () => {
         }
       } catch (error) {
         console.error("Erro ao carregar itens:", error);
-        // Fallback sem usar Set
         const todosItens = materiais.map(m => m.item).filter(item => item);
         const itensUnicos = todosItens.filter((item, index) => 
           todosItens.indexOf(item) === index
@@ -311,7 +297,6 @@ const CadastrarMaterialView: React.FC = () => {
         setItensFiltrados(prev => [...prev, novoItem]);
       }
       
-      // Limpa o formulário
       setNovoMaterial("");
       setItemSelecionado("");
       setDescricao("");
@@ -340,7 +325,6 @@ const CadastrarMaterialView: React.FC = () => {
     }
   };
 
-  // Lógica de paginação para materiais filtrados
   const totalItems = materiaisFiltrados.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;

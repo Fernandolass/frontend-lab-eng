@@ -45,7 +45,6 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
   const [observacoesTemp, setObservacoesTemp] = useState<{ [key: string]: string }>({});
   const [ambientesContraidos, setAmbientesContraidos] = useState<{ [key: number]: boolean }>({});
 
-  // 🔹 Buscar projeto do backend
   useEffect(() => {
     const carregarProjeto = async () => {
       if (!projetoId) return;
@@ -62,13 +61,11 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     carregarProjeto();
   }, [projetoId]);
 
-  // 🔹 Função auxiliar: verifica se o projeto deve ser aprovado ou reprovado
   const verificarStatusProjeto = async (dadosProjeto: ProjetoDetalhes) => {
     const todosMateriais = dadosProjeto.ambientes.flatMap((a) => a.materials);
     const pendentes = todosMateriais.filter((m) => m.status === "PENDENTE").length;
     const reprovados = todosMateriais.filter((m) => m.status === "REPROVADO").length;
 
-    // se não há pendentes, definimos o status final
     if (pendentes === 0) {
       try {
         if (reprovados > 0) {
@@ -110,7 +107,6 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     );
   }
 
-  // ✅ Aprovar material individual
   const handleAprovarMaterial = async (ambienteId: number, materialId: number) => {
     try {
       await aprovarMaterial(materialId);
@@ -152,7 +148,6 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     }
   };
 
-  // ❌ Reprovar material individual
   const handleReprovarMaterial = async (ambienteId: number, materialId: number) => {
     const motivo =
       observacoesTemp[materialId] || "Item reprovado sem observações específicas";

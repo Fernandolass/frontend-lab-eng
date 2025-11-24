@@ -15,7 +15,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
   const [sugestoes, setSugestoes] = useState<Record<string, string[]>>({});
 
 
-  // 🔹 Carrega projeto e monta dados locais
+  // Carrega projeto e monta dados locais
   useEffect(() => {
     const carregar = async () => {
       if (!projetoId) return;
@@ -23,13 +23,11 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
       try {
         const proj = await obterProjeto(parseInt(projetoId));
 
-        // 🔹 Garante que todos os ambientes tenham seus materiais carregados
         const materiais: Record<number, any[]> = {};
         proj.ambientes.forEach((amb: any) => {
           materiais[amb.id] = amb.materials || [];
         });
 
-        // 🔹 Monta lista de itens e sugestões — agora por ambiente + item
         const agrupado: Record<string, Set<string>> = {};
         const itensUnicos: Record<string, string> = {};
 
@@ -38,7 +36,6 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
             const itemKey = m.item?.toUpperCase()?.trim();
             if (!itemKey) return;
 
-            // 🔑 chave única ambiente + item
             const chave = `${amb.nome_do_ambiente?.toUpperCase()}__${itemKey}`;
 
             itensUnicos[chave] = `${amb.nome_do_ambiente} - ${m.item || itemKey}`;
@@ -48,13 +45,11 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
           });
         });
 
-        // 🔹 Converte Set → Array
         const limpo: Record<string, string[]> = {};
         Object.keys(agrupado).forEach((key) => {
           limpo[key] = Array.from(agrupado[key]);
         });
 
-        // 🔹 Atualiza estados
         setProjeto(proj);
         setMateriaisPorAmbiente(materiais);
         setSugestoes(limpo);
@@ -70,7 +65,6 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
     carregar();
   }, [projetoId]);
 
-  // 🔹 Atualiza descrição existente (PATCH)
   const handleChange = async (ambienteId: number, materialId: number, value: string) => {
     setMateriaisPorAmbiente((prev) => ({
       ...prev,
@@ -89,8 +83,6 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
       console.error("Erro ao salvar material:", err);
     }
   };
-
-  // 🔹 Cria novo material se não existir
 
   if (loading || !projeto) return <p>Carregando...</p>;
 
@@ -160,7 +152,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
         </div>
       ))}
 
-      {/* ===================== DESCRIÇÃO DAS MARCAS ===================== */}
+      {/*DESCRIÇÃO DAS MARCAS */}
       <div className="mt-5">
         <h4>Descrição das Marcas</h4>
         <table className="table table-bordered align-middle">
@@ -187,44 +179,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
             )}
           </tbody>
         </table>
-
-        {/* <button 
-          className="btn btn-outline-primary"
-          onClick={async () => {
-            await apiFetch("/api/marcas-descricao/", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                material: "Novo Material",
-                marcas: "",
-                projeto: projeto.id,
-              }),
-            });
-            window.location.reload();
-          }}
-        >
-          + Adicionar Linha
-        </button> */}
       </div>
-
-      {/* ===================== OBSERVAÇÕES GERAIS ===================== */}
-      {/* <div className="mt-5">
-        <h4>Observações Gerais</h4>
-        <textarea
-          className="form-control"
-          rows={5}
-          value={projeto.observacoes_gerais || ""}
-          onChange={(e) =>
-            apiFetch(`/api/projetos/${projeto.id}/`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ observacoes_gerais: e.target.value }),
-            })
-          }
-          placeholder="Digite as observações gerais..."
-        />
-      </div> */}
-
       <div className="d-flex justify-content-start mt-4">
         <button className="btn btn-secondary" onClick={onBack}>
           Voltar

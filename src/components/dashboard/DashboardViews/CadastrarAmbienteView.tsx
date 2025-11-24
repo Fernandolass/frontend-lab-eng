@@ -17,7 +17,6 @@ const CadastrarAmbienteView: React.FC = () => {
   const [carregandoAmbientes, setCarregandoAmbientes] = useState(true);
   const [mensagem, setMensagem] = useState<{ texto: string; tipo: 'sucesso' | 'erro' } | null>(null);
 
-  // Estados de paginação
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
 
@@ -78,7 +77,6 @@ const CadastrarAmbienteView: React.FC = () => {
     }));
   };
 
-  // Lógica de paginação
   const totalItems = ambientes.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
