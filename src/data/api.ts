@@ -86,25 +86,24 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 export async function gerarPDFProjeto(projetoId: number): Promise<Blob> {
   try {
     const token = getAccessToken();
-    const headers: HeadersInit = {
-      'Accept': 'application/pdf',
-    };
+    const headers: HeadersInit = {};
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${BASE}/api/projetos/${projetoId}/gerar-pdf/`, {
+    // ✅ REMOVA o cabeçalho Accept ou mude para application/json
+    // headers['Accept'] = 'application/pdf'; // ← REMOVER ESTA LINHA
+
+    const response = await fetch(`${BASE}/api/projetos/${projetoId}/download-especificacao/`, {
       method: 'GET',
       headers,
     });
 
     if (!response.ok) {
-      // Tenta ler como texto para evitar o HTML gigante
       let errorMessage = `Erro ${response.status}: ${response.statusText}`;
       try {
         const errorText = await response.text();
-        // Filtra HTML gigante
         if (errorText.includes('<!DOCTYPE html>') || errorText.includes('<html')) {
           errorMessage += ' - Endpoint não encontrado';
         } else {

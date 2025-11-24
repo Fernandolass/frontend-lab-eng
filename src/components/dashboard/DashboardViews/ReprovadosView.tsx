@@ -91,9 +91,6 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails }) => {
                     >
                       Ver Detalhes
                     </button>
-                    <button className="btn btn-secondary">
-                      Download
-                    </button>
                   </div>
                 </td>
               </tr>
