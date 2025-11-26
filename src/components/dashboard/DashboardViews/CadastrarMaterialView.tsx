@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { criarMaterial, listarAmbientes } from "../../../data/projects";
+import { criarMaterial, listarAmbientes, atualizarMaterial, deletarMaterial } from "../../../data/projects";
 import { Ambiente, apiFetch } from "../../../data/api";
 
 interface Material {
   id: number;
+  ambiente: number;
   item: string;
   descricao: string;
-  ambiente: number;
-  descricao_detalhada?: string;
+  marca: number | null;
+  ambiente_nome: string;
+  ambiente_categoria: string;
+  status: string;
+  motivo: string | null;
+  aprovador: number | null;
+  data_aprovacao: string | null;
+  updated_at: string;
 }
 
 interface AmbienteAPI {
@@ -15,7 +22,6 @@ interface AmbienteAPI {
   nome: string;
   categoria: string;
   tipo?: number;
-  guia_de_cores?: string;
 }
 
 interface MaterialAPIResponse {
@@ -25,23 +31,15 @@ interface MaterialAPIResponse {
   results: Material[];
 }
 
-interface ItensAPIResponse {
-  count?: number;
-  next: string | null;
-  previous: string | null;
-  results: any[];
-}
-
 const CadastrarMaterialView: React.FC = () => {
   const [materiais, setMateriais] = useState<Material[]>([]);
   const [materiaisFiltrados, setMateriaisFiltrados] = useState<Material[]>([]);
   const [itensDisponiveis, setItensDisponiveis] = useState<any[]>([]);
   const [itensFiltrados, setItensFiltrados] = useState<any[]>([]);
   const [ambientes, setAmbientes] = useState<Ambiente[]>([]);
-  const [novoMaterial, setNovoMaterial] = useState<string>("");
+  const [nomeMaterial, setNomeMaterial] = useState<string>("");
   const [itemSelecionado, setItemSelecionado] = useState<string>("");
   const [ambienteSelecionado, setAmbienteSelecionado] = useState<string>("");
-  const [descricao, setDescricao] = useState<string>("");
   const [pesquisaItem, setPesquisaItem] = useState<string>("");
   const [pesquisaMaterial, setPesquisaMaterial] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -49,7 +47,14 @@ const CadastrarMaterialView: React.FC = () => {
   const [carregandoItens, setCarregandoItens] = useState(true);
   const [carregandoAmbientes, setCarregandoAmbientes] = useState(true);
   const [mensagem, setMensagem] = useState<{ texto: string; tipo: 'sucesso' | 'erro' } | null>(null);
+  const [erroItens, setErroItens] = useState<string | null>(null);
+  
+  // Estados para edição
+  const [materialEditando, setMaterialEditando] = useState<Material | null>(null);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState<number | null>(null);
+  const [carregandoAcao, setCarregandoAcao] = useState<number | null>(null);
 
+  // Estados de paginação
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -62,10 +67,9 @@ const CadastrarMaterialView: React.FC = () => {
   const mapearAmbienteAPI = (ambientesAPI: AmbienteAPI[]): Ambiente[] => {
     return ambientesAPI.map(amb => ({
       id: amb.id,
-      nome_do_ambiente: amb.nome, 
+      nome_do_ambiente: amb.nome,
       categoria: amb.categoria,
       tipo: amb.tipo,
-      guia_de_cores: amb.guia_de_cores
     }));
   };
 
@@ -87,24 +91,22 @@ const CadastrarMaterialView: React.FC = () => {
   useEffect(() => {
     if (pesquisaMaterial.trim() === "") {
       setMateriaisFiltrados(materiais);
-      setCurrentPage(1); 
+      setCurrentPage(1);
     } else {
       const termoPesquisa = pesquisaMaterial.toLowerCase().trim();
       const filtrados = materiais.filter(material => {
         const nomeMaterial = material.descricao.toLowerCase();
         const nomeItem = material.item.toLowerCase();
-        const descricaoDetalhada = (material.descricao_detalhada || "").toLowerCase();
-        const nomeAmbiente = (ambientes.find(a => a.id === material.ambiente)?.nome_do_ambiente || "").toLowerCase();
+        const nomeAmbiente = material.ambiente_nome.toLowerCase();
         
         return nomeMaterial.includes(termoPesquisa) ||
                nomeItem.includes(termoPesquisa) ||
-               descricaoDetalhada.includes(termoPesquisa) ||
                nomeAmbiente.includes(termoPesquisa);
       });
       setMateriaisFiltrados(filtrados);
-      setCurrentPage(1); 
+      setCurrentPage(1);
     }
-  }, [pesquisaMaterial, materiais, ambientes]);
+  }, [pesquisaMaterial, materiais]);
 
   // Função para carregar TODOS os materiais (com paginação)
   const carregarTodosMateriais = async (): Promise<Material[]> => {
@@ -138,7 +140,6 @@ const CadastrarMaterialView: React.FC = () => {
         }
       }
 
-      console.log("✅ Total de materiais carregados:", todosMateriais.length);
       return todosMateriais;
     } catch (error) {
       console.error("❌ Erro ao carregar materiais:", error);
@@ -146,12 +147,12 @@ const CadastrarMaterialView: React.FC = () => {
     }
   };
 
+  // CARREGA AMBIENTES EXISTENTES
   useEffect(() => {
     const carregarAmbientes = async () => {
       try {
         setCarregandoAmbientes(true);
         const ambientesData = await listarAmbientes();
-        console.log("Ambientes carregados:", ambientesData);
         
         const ambientesMapeados = mapearAmbienteAPI(ambientesData);
         setAmbientes(ambientesMapeados);
@@ -169,15 +170,14 @@ const CadastrarMaterialView: React.FC = () => {
     carregarAmbientes();
   }, []);
 
+  // CARREGA TODOS OS MATERIAIS EXISTENTES
   useEffect(() => {
     const carregarMateriais = async () => {
       try {
         setCarregando(true);
-        
         const todosMateriais = await carregarTodosMateriais();
         setMateriais(todosMateriais);
         setMateriaisFiltrados(todosMateriais);
-        
       } catch (error) {
         console.error("Erro ao carregar materiais:", error);
         mostrarMensagem("Erro ao carregar materiais.", "erro");
@@ -188,40 +188,41 @@ const CadastrarMaterialView: React.FC = () => {
     carregarMateriais();
   }, []);
 
+  // CARREGA ITENS DISPONÍVEIS
   useEffect(() => {
     const carregarItens = async () => {
       try {
         setCarregandoItens(true);
+        setErroItens(null);
         
-        let todosItensAPI: any[] = [];
-        let nextUrl: string | null = "/api/itens/";
+        let todosMateriaisAPI: any[] = [];
+        let nextUrl: string | null = "/api/materiais/";
         
         while (nextUrl) {
-          const response: ItensAPIResponse = await apiFetch(nextUrl);
+          const response: any = await apiFetch(nextUrl);
           
-          let itensDaPagina: any[] = [];
+          let materiaisDaPagina: any[] = [];
           let nextPageUrl: string | null = null;
           
           if (Array.isArray(response)) {
-            itensDaPagina = response;
+            materiaisDaPagina = response;
             nextPageUrl = null;
           } else if (response && typeof response === 'object' && Array.isArray(response.results)) {
-            itensDaPagina = response.results;
+            materiaisDaPagina = response.results;
             nextPageUrl = response.next ? response.next.replace(/^.*\/\/[^/]+/, '') : null;
           } else {
-            break;
+            throw new Error("Formato de resposta inválido da API");
           }
           
-          todosItensAPI = [...todosItensAPI, ...itensDaPagina];
+          todosMateriaisAPI = [...todosMateriaisAPI, ...materiaisDaPagina];
           nextUrl = nextPageUrl;
         }
 
-        if (todosItensAPI.length > 0) {
-          console.log("Itens disponíveis da API:", todosItensAPI);
-          setItensDisponiveis(todosItensAPI);
-          setItensFiltrados(todosItensAPI);
-        } else {
-          const todosItens = materiais.map(m => m.item).filter(item => item);
+        if (todosMateriaisAPI.length > 0) {
+          const todosItens = todosMateriaisAPI
+            .map(material => material.item)
+            .filter(item => item && item.trim() !== '');
+          
           const itensUnicos = todosItens.filter((item, index) => 
             todosItens.indexOf(item) === index
           ).map((item, index) => ({ 
@@ -230,36 +231,33 @@ const CadastrarMaterialView: React.FC = () => {
             item_label: item 
           }));
           
-          console.log("Itens extraídos dos materiais:", itensUnicos);
           setItensDisponiveis(itensUnicos);
           setItensFiltrados(itensUnicos);
+        } else {
+          setItensDisponiveis([]);
+          setItensFiltrados([]);
+          setErroItens("Nenhum material cadastrado no sistema. Crie o primeiro material para gerar a lista de itens.");
         }
       } catch (error) {
-        console.error("Erro ao carregar itens:", error);
-        const todosItens = materiais.map(m => m.item).filter(item => item);
-        const itensUnicos = todosItens.filter((item, index) => 
-          todosItens.indexOf(item) === index
-        ).map((item, index) => ({ 
-          id: index + 1, 
-          nome: item, 
-          item_label: item 
-        }));
+        console.error("❌ Erro ao carregar itens dos materiais:", error);
+        const errorMessage = error instanceof Error 
+          ? `Erro ao carregar itens: ${error.message}`
+          : "Erro ao carregar lista de itens. Tente recarregar a página.";
         
-        setItensDisponiveis(itensUnicos);
-        setItensFiltrados(itensUnicos);
+        setErroItens(errorMessage);
+        setItensDisponiveis([]);
+        setItensFiltrados([]);
       } finally {
         setCarregandoItens(false);
       }
     };
     
-    if (materiais.length > 0) {
-      carregarItens();
-    }
-  }, [materiais]);
+    carregarItens();
+  }, []);
 
   // CRIA NOVO MATERIAL
   const handleCriarMaterial = async () => {
-    if (!novoMaterial.trim()) {
+    if (!nomeMaterial.trim()) {
       mostrarMensagem("Digite o nome do material!", "erro");
       return;
     }
@@ -274,17 +272,18 @@ const CadastrarMaterialView: React.FC = () => {
 
     setLoading(true);
     try {
-      const materialNovo = await criarMaterial({
+      const materialData: any = {
         ambiente: parseInt(ambienteSelecionado),
         item: itemSelecionado,
-        descricao: novoMaterial,
+        descricao: nomeMaterial,
         marca: null
-      });
-      
-      console.log("Novo material criado:", materialNovo);
+      };
+
+      const materialNovo = await criarMaterial(materialData);
       
       // ATUALIZA A LISTA COM O NOVO MATERIAL
-      setMateriais(prev => [...prev, materialNovo]);
+      setMateriais(prev => [materialNovo, ...prev]);
+      setMateriaisFiltrados(prev => [materialNovo, ...prev]);
       
       // ATUALIZA LISTA DE ITENS SE FOR UM NOVO ITEM
       if (!itensDisponiveis.some(item => item.nome === itemSelecionado || item.item_label === itemSelecionado)) {
@@ -295,11 +294,15 @@ const CadastrarMaterialView: React.FC = () => {
         };
         setItensDisponiveis(prev => [...prev, novoItem]);
         setItensFiltrados(prev => [...prev, novoItem]);
+        
+        if (erroItens) {
+          setErroItens(null);
+        }
       }
       
-      setNovoMaterial("");
+      // Limpa o formulário
+      setNomeMaterial("");
       setItemSelecionado("");
-      setDescricao("");
       setPesquisaItem("");
       
       mostrarMensagem("✅ Material criado com sucesso! Já está disponível para uso em todos os projetos.", "sucesso");
@@ -319,12 +322,82 @@ const CadastrarMaterialView: React.FC = () => {
     }
   };
 
+  // EDITAR MATERIAL
+  const handleEditarMaterial = async () => {
+    if (!materialEditando) return;
+    
+    if (!materialEditando.descricao.trim()) {
+      mostrarMensagem("Digite o nome do material!", "erro");
+      return;
+    }
+    if (!materialEditando.item) {
+      mostrarMensagem("Selecione um item!", "erro");
+      return;
+    }
+
+    setCarregandoAcao(materialEditando.id);
+    try {
+      const materialAtualizado = await atualizarMaterial(materialEditando.id, {
+        item: materialEditando.item,
+        descricao: materialEditando.descricao,
+      });
+
+      // Atualiza a lista local mantendo os dados do backend
+      setMateriais(prev => prev.map(m => 
+        m.id === materialEditando.id ? materialAtualizado : m
+      ));
+      setMateriaisFiltrados(prev => prev.map(m => 
+        m.id === materialEditando.id ? materialAtualizado : m
+      ));
+
+      setMaterialEditando(null);
+      mostrarMensagem("✅ Material atualizado com sucesso!", "sucesso");
+    } catch (error: any) {
+      console.error("Erro ao editar material:", error);
+      mostrarMensagem("Erro ao editar material.", "erro");
+    } finally {
+      setCarregandoAcao(null);
+    }
+  };
+
+  // EXCLUIR MATERIAL
+  const handleExcluirMaterial = async (materialId: number) => {
+    setCarregandoAcao(materialId);
+    setConfirmandoExclusao(null);
+    
+    try {
+      await deletarMaterial(materialId);
+      
+      // Remove da lista local
+      setMateriais(prev => prev.filter(m => m.id !== materialId));
+      setMateriaisFiltrados(prev => prev.filter(m => m.id !== materialId));
+      
+      mostrarMensagem("✅ Material excluído com sucesso!", "sucesso");
+    } catch (error: any) {
+      console.error("Erro ao excluir material:", error);
+      mostrarMensagem("Erro ao excluir material.", "erro");
+    } finally {
+      setCarregandoAcao(null);
+    }
+  };
+
+  // INICIAR EDIÇÃO
+  const iniciarEdicao = (material: Material) => {
+    setMaterialEditando({...material});
+  };
+
+  // CANCELAR EDIÇÃO
+  const cancelarEdicao = () => {
+    setMaterialEditando(null);
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleCriarMaterial();
     }
   };
 
+  // Lógica de paginação para materiais filtrados
   const totalItems = materiaisFiltrados.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -360,25 +433,19 @@ const CadastrarMaterialView: React.FC = () => {
         </div>
         <div className="card-body">
           <div className="row">
-            <div className="col-md-3">
-              <label className="form-label">Nome do Material *</label>
-              <input
-                type="text"
-                placeholder="Ex: Porcelanato, Tinta PVA, etc."
-                className="form-control"
-                value={novoMaterial}
-                onChange={(e) => setNovoMaterial(e.target.value)}
-                onKeyPress={handleKeyPress}
-              />
-            </div>
-            
-            <div className="col-md-3">
-              <label className="form-label">Item *</label>
+            <div className="col-md-4">
+              <label className="form-label">Item</label>
               {carregandoItens ? (
                 <div className="text-muted small">Carregando itens...</div>
+              ) : erroItens ? (
+                <div className="alert alert-danger py-2">
+                  <small>
+                    <i className="bi bi-exclamation-triangle me-1"></i>
+                    {erroItens}
+                  </small>
+                </div>
               ) : (
                 <div>
-                  {/* Barra de pesquisa para itens */}
                   <div className="input-group mb-2">
                     <span className="input-group-text">
                       <i className="bi bi-search"></i>
@@ -405,6 +472,7 @@ const CadastrarMaterialView: React.FC = () => {
                     className="form-select"
                     value={itemSelecionado}
                     onChange={(e) => setItemSelecionado(e.target.value)}
+                    disabled={itensFiltrados.length === 0}
                   >
                     <option value="">Selecione um item</option>
                     {itensFiltrados.length === 0 && pesquisaItem ? (
@@ -420,7 +488,6 @@ const CadastrarMaterialView: React.FC = () => {
                     )}
                   </select>
                   
-                  {/* Contador de resultados */}
                   {pesquisaItem && (
                     <div className="mt-1">
                       <small className="text-muted">
@@ -432,8 +499,20 @@ const CadastrarMaterialView: React.FC = () => {
               )}
             </div>
 
-            <div className="col-md-3">
-              <label className="form-label">Ambiente *</label>
+            <div className="col-md-4">
+              <label className="form-label">Nome do Material</label>
+              <input
+                type="text"
+                placeholder="Ex: Porcelanato esmaltado 60x60cm"
+                className="form-control"
+                value={nomeMaterial}
+                onChange={(e) => setNomeMaterial(e.target.value)}
+                onKeyPress={handleKeyPress}
+              />
+            </div>
+
+            <div className="col-md-4">
+              <label className="form-label">Ambiente</label>
               {carregandoAmbientes ? (
                 <div className="text-muted small">Carregando ambientes...</div>
               ) : (
@@ -451,25 +530,13 @@ const CadastrarMaterialView: React.FC = () => {
                 </select>
               )}
             </div>
-
-            <div className="col-md-3">
-              <label className="form-label">Descrição Detalhada</label>
-              <input
-                type="text"
-                placeholder="Ex: Porcelanato esmaltado 60x60cm"
-                className="form-control"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                onKeyPress={handleKeyPress}
-              />
-            </div>
           </div>
 
           <div className="d-flex justify-content-end mt-3">
             <button
               className="btn btn-primary px-4"
               onClick={handleCriarMaterial}
-              disabled={loading || !novoMaterial.trim() || !itemSelecionado || !ambienteSelecionado}
+              disabled={loading || !nomeMaterial.trim() || !itemSelecionado || !ambienteSelecionado || !!erroItens}
             >
               {loading ? (
                 <>
@@ -495,7 +562,6 @@ const CadastrarMaterialView: React.FC = () => {
           </div>
         </div>
         <div className="card-body">
-          {/* Barra de pesquisa para materiais */}
           <div className="row mb-4">
             <div className="col-md-6">
               <div className="input-group">
@@ -505,7 +571,7 @@ const CadastrarMaterialView: React.FC = () => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Pesquisar materiais por nome, item, ambiente ou descrição..."
+                  placeholder="Pesquisar materiais por nome, item ou ambiente..."
                   value={pesquisaMaterial}
                   onChange={(e) => setPesquisaMaterial(e.target.value)}
                 />
@@ -554,26 +620,130 @@ const CadastrarMaterialView: React.FC = () => {
                   <thead className="table-light">
                     <tr>
                       <th>Item</th>
-                      <th>Material</th>
+                      <th>Nome do Material</th>
                       <th>Ambiente</th>
-                      <th>Descrição</th>
+                      <th style={{ width: '150px' }}>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {paginatedMateriais.map((material) => (
                       <tr key={material.id}>
-                        <td>
-                          <span className="badge bg-primary">
-                            {material.item}
-                          </span>
-                        </td>
-                        <td className="fw-semibold">{material.descricao}</td>
-                        <td>
-                          <span className="badge bg-secondary">
-                            {ambientes.find(a => a.id === material.ambiente)?.nome_do_ambiente || `Ambiente ${material.ambiente}`}
-                          </span>
-                        </td>
-                        <td>{material.descricao_detalhada || "-"}</td>
+                        {materialEditando?.id === material.id ? (
+                          // MODO EDIÇÃO
+                          <>
+                            <td>
+                              <select
+                                className="form-select form-select-sm"
+                                value={materialEditando.item}
+                                onChange={(e) => setMaterialEditando({
+                                  ...materialEditando,
+                                  item: e.target.value
+                                })}
+                              >
+                                <option value="">Selecione um item</option>
+                                {itensDisponiveis.map((item) => (
+                                  <option key={item.id} value={item.item_label || item.nome}>
+                                    {item.item_label || item.nome}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm"
+                                value={materialEditando.descricao}
+                                onChange={(e) => setMaterialEditando({
+                                  ...materialEditando,
+                                  descricao: e.target.value
+                                })}
+                              />
+                            </td>
+                            <td>
+                              <span className="badge bg-secondary">
+                                {material.ambiente_nome}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="d-flex gap-1">
+                                <button
+                                  className="btn btn-primary btn-sm"
+                                  onClick={handleEditarMaterial}
+                                  disabled={carregandoAcao === material.id}
+                                >
+                                  {carregandoAcao === material.id ? (
+                                    <span className="spinner-border spinner-border-sm" />
+                                  ) : (
+                                    'Salvar'
+                                  )}
+                                </button>
+                                <button
+                                  className="btn btn-secondary btn-sm"
+                                  onClick={cancelarEdicao}
+                                  disabled={carregandoAcao === material.id}
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          // MODO VISUALIZAÇÃO
+                          <>
+                            <td>
+                              <span className=" fw-normal">
+                                {material.item}
+                              </span>
+                            </td>
+                            <td className="fw-semibold">{material.descricao}</td>
+                            <td>
+                              <span className="badge bg-secondary">
+                                {material.ambiente_nome}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="d-flex gap-1">
+                                <button
+                                  className="btn btn-primary btn-sm"
+                                  onClick={() => iniciarEdicao(material)}
+                                  disabled={carregandoAcao === material.id}
+                                >
+                                  Editar
+                                </button>
+                                {confirmandoExclusao === material.id ? (
+                                  <div className="d-flex align-items-center gap-1">
+                                    <span className="text-muted small">Confirmar?</span>
+                                    <button
+                                      className="btn btn-primary btn-sm"
+                                      onClick={() => handleExcluirMaterial(material.id)}
+                                      disabled={carregandoAcao === material.id}
+                                    >
+                                      {carregandoAcao === material.id ? (
+                                        <span className="spinner-border spinner-border-sm" />
+                                      ) : (
+                                        '✓'
+                                      )}
+                                    </button>
+                                    <button
+                                      className="btn btn-secondary btn-sm"
+                                      onClick={() => setConfirmandoExclusao(null)}
+                                    >
+                                      ✗
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    className="btn btn-secondary btn-sm"
+                                    onClick={() => setConfirmandoExclusao(material.id)}
+                                    disabled={carregandoAcao === material.id}
+                                  >
+                                    Excluir
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>

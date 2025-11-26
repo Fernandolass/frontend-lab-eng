@@ -1,5 +1,6 @@
 import { apiFetch } from "./api";
 import type { ProjetoDetalhes, Ambiente, Material } from "./mockData";
+
 // map status BACKEND -> FRONT
 function mapStatus(s: string): "aprovado" | "reprovado" | "pendente" {
   const x = s.toLowerCase();
@@ -545,4 +546,79 @@ export async function atualizarMaterial(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(dados),
   });
+}
+
+// 🔹 Funções de contagem para o dashboard - Adicione estas funções no projects.ts
+
+export async function contarAmbientes(): Promise<number> {
+  try {
+    const ambientes = await listarAmbientes();
+    return ambientes.length;
+  } catch (error) {
+    console.error('Erro ao contar ambientes:', error);
+    return 0;
+  }
+}
+
+export async function contarMateriais(): Promise<number> {
+  try {
+    const data = await listarMateriais(1);
+    return data.count || 0;
+  } catch (error) {
+    console.error('Erro ao contar materiais:', error);
+    return 0;
+  }
+}
+
+export async function contarMarcas(): Promise<number> {
+  try {
+    const marcas = await listarMarcas();
+    return Array.isArray(marcas) ? marcas.length : 0;
+  } catch (error) {
+    console.error('Erro ao contar marcas:', error);
+    return 0;
+  }
+}
+
+export async function contarUsuarios(): Promise<number> {
+  try {
+    const data = await listarUsuarios(1);
+    return data.count || 0;
+  } catch (error) {
+    console.error('Erro ao contar usuários:', error);
+    return 0;
+  }
+}
+export async function getDistribuicaoProjetos(): Promise<{
+  residencial: number;
+  comercial: number;
+  industrial: number;
+}> {
+  try {
+    const projetos = await listarProjetos(1); // Pega primeira página
+    const distribuicao = {
+      residencial: 0,
+      comercial: 0,
+      industrial: 0
+    };
+
+    projetos.results.forEach((projeto: any) => {
+      const tipo = projeto.tipoProjeto?.toLowerCase() || projeto.tipo_do_projeto?.toLowerCase() || 'outro';
+      
+      if (tipo.includes('residencial') || tipo.includes('casa') || tipo.includes('apartamento')) {
+        distribuicao.residencial++;
+      } else if (tipo.includes('comercial') || tipo.includes('loja') || tipo.includes('escritório')) {
+        distribuicao.comercial++;
+      } else if (tipo.includes('industrial') || tipo.includes('fábrica') || tipo.includes('galpão')) {
+        distribuicao.industrial++;
+      } else {
+        distribuicao.comercial++;
+      }
+    });
+
+    return distribuicao;
+  } catch (error) {
+    console.error('Erro ao obter distribuição de projetos:', error);
+    return { residencial: 0, comercial: 0, industrial: 0 };
+  }
 }

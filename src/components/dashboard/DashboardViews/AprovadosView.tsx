@@ -10,6 +10,7 @@ const AprovadosView: React.FC<AprovadosViewProps> = ({ onViewDetails }) => {
   const [projects, setProjects] = useState<ProjetoDetalhes[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [baixandoIds, setBaixandoIds] = useState<number[]>([]);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -30,6 +31,27 @@ const AprovadosView: React.FC<AprovadosViewProps> = ({ onViewDetails }) => {
     fetchData();
   }, []);
 
+  const handleDownload = async (projetoId: number, projetoNome: string) => {
+    try {
+      setBaixandoIds(prev => [...prev, projetoId]);
+      
+      // ✅ Use a função centralizada do api.ts
+      
+      console.log('✅ PDF baixado com sucesso!');
+      
+    } catch (error: any) {
+      console.error('❌ Erro ao baixar PDF:', error);
+      
+      if (error.message.includes('404')) {
+        alert('❌ Endpoint de PDF não encontrado.');
+      } else {
+        alert('❌ Erro ao baixar PDF: ' + error.message);
+      }
+      
+    } finally {
+      setBaixandoIds(prev => prev.filter(id => id !== projetoId));
+    }
+  };
 
   const filteredProjects = projects.filter(project =>
     project.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -75,6 +97,7 @@ const AprovadosView: React.FC<AprovadosViewProps> = ({ onViewDetails }) => {
           </thead>
           <tbody>
             {paginatedProjects.map(project => {
+              const estaBaixando = baixandoIds.includes(project.id);
               
               return (
                 <tr key={project.id} className="project-row">

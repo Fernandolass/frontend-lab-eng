@@ -92,6 +92,9 @@ export async function gerarPDFProjeto(projetoId: number): Promise<Blob> {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // ✅ REMOVA o cabeçalho Accept ou mude para application/json
+    // headers['Accept'] = 'application/pdf'; // ← REMOVER ESTA LINHA
+
     const response = await fetch(`${BASE}/api/projetos/${projetoId}/download-especificacao/`, {
       method: 'GET',
       headers,
@@ -107,6 +110,7 @@ export async function gerarPDFProjeto(projetoId: number): Promise<Blob> {
           errorMessage += ` - ${errorText.substring(0, 100)}...`;
         }
       } catch {
+        // Se não conseguir ler como texto, usa a mensagem básica
       }
       throw new Error(errorMessage);
     }
@@ -148,7 +152,7 @@ export async function downloadPDFProjeto(projetoId: number, projetoNome: string)
 export async function getProjetoDetalhes(id: number) {
   const projeto = await apiFetch(`/api/projetos/${id}/`);
 
-  // Carrega os materiais de cada ambiente, filtrando por projeto
+  // 🔹 Carrega os materiais de cada ambiente, filtrando por projeto
   const ambientes = await Promise.all(
     (projeto.ambientes || []).map(async (a: any) => {
       const data = await apiFetch(`/api/materiais/?projeto=${id}&ambiente=${a.id}`);
@@ -187,6 +191,41 @@ export async function getStatsMensais() {
   return apiFetch("/api/stats/mensais/");
 }
 
+/* ==========================================================
+   🔹 MODELOS
+   ========================================================== */
+export async function listarModelos() {
+  return apiFetch("/api/modelos/");
+}
+
+export async function obterModelo(id: number) {
+  return apiFetch(`/api/modelos/${id}/`);
+}
+
+export async function criarModelo(payload: {
+  nome: string;
+  tipo_modelo: string;
+  projeto_origem_id: number;
+  descricao?: string;
+  observacoes_gerais?: string;
+}) {
+  return apiFetch("/api/modelos/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function excluirModelo(id: number) {
+  return apiFetch(`/api/modelos/${id}/`, {
+    method: "DELETE",
+  });
+}
+
+/* ==========================================================
+   🔹 MARCAS DESCRIÇÃO
+   ========================================================== */
+// api.ts - APENAS ESTAS PARTES MUDAM:
 
 /* ==========================================================
    🔹 MARCAS DESCRIÇÃO
@@ -194,11 +233,15 @@ export async function getStatsMensais() {
 export interface MaterialMarca {
   id: number;
   material: string;
-  marcas: string; 
+  marcas: string; // ← ESTA PERMANECE string (para o GET)
 }
+
+// MUDAR ESTA INTERFACE:
+// api.ts - REVERTA a interface MarcaFormData:
+
 export interface MarcaFormData {
   material: string;
-  marcas: string; 
+  marcas: string; // ← Mantenha como string (não array)
 }
 
 export interface MarcasResponse {
@@ -208,12 +251,17 @@ export interface MarcasResponse {
   results: MaterialMarca[];
 }
 
-// GET para listar materiais e marcas existentes 
+// GET para listar materiais e marcas existentes - NÃO MUDA
 export async function getMarcasDescricao(): Promise<MarcasResponse> {
   return apiFetch("/api/marcas-descricao/");
 }
 
+// MUDAR ESTA FUNÇÃO:
+// POST para salvar nova marca
+// api.ts - Apenas esta função muda:
+
 export async function salvarMarcaDescricao(data: MarcaFormData): Promise<any> {
+  // Garante que marcas seja sempre um array
   const marcasArray = Array.isArray(data.marcas) 
     ? data.marcas 
     : [data.marcas.trim()].filter(marca => marca !== '');

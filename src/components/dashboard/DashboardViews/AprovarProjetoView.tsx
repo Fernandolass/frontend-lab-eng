@@ -13,7 +13,7 @@ interface AprovarProjetoViewProps {
 
 interface Material {
   id: number;
-  item_label: string;
+  item: string;
   descricao: string;
   status: string;
   motivo?: string;
@@ -44,7 +44,19 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
   const [loading, setLoading] = useState(true);
   const [observacoesTemp, setObservacoesTemp] = useState<{ [key: string]: string }>({});
   const [ambientesContraidos, setAmbientesContraidos] = useState<{ [key: number]: boolean }>({});
+  const [mensagem, setMensagem] = useState<{ texto: string; tipo: 'sucesso' | 'erro' } | null>(null);
+  const [carregandoAcao, setCarregandoAcao] = useState<{ materialId: number | null, tipo: 'aprovar' | 'reprovar' | null }>({ 
+    materialId: null, 
+    tipo: null 
+  });
 
+  // Sistema de mensagens
+  const mostrarMensagem = (texto: string, tipo: 'sucesso' | 'erro') => {
+    setMensagem({ texto, tipo });
+    setTimeout(() => setMensagem(null), 5000);
+  };
+
+  // 🔹 Buscar projeto do backend
   useEffect(() => {
     const carregarProjeto = async () => {
       if (!projetoId) return;
@@ -54,6 +66,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
         setProjetoData(data);
       } catch (e: any) {
         console.error("Erro ao buscar projeto:", e.message);
+        mostrarMensagem("Erro ao carregar projeto", "erro");
       } finally {
         setLoading(false);
       }
@@ -61,25 +74,156 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     carregarProjeto();
   }, [projetoId]);
 
-  const verificarStatusProjeto = async (dadosProjeto: ProjetoDetalhes) => {
-    const todosMateriais = dadosProjeto.ambientes.flatMap((a) => a.materials);
+  // 🔹 Função para verificar e atualizar status do projeto
+  const verificarEAtualizarStatusProjeto = async (dadosAtuais: ProjetoDetalhes) => {
+    const todosMateriais = dadosAtuais.ambientes.flatMap((a) => a.materials);
     const pendentes = todosMateriais.filter((m) => m.status === "PENDENTE").length;
     const reprovados = todosMateriais.filter((m) => m.status === "REPROVADO").length;
 
-    if (pendentes === 0) {
+    console.log("🔍 Verificando status do projeto:", { 
+      total: todosMateriais.length,
+      pendentes, 
+      reprovados,
+      aprovados: todosMateriais.filter((m) => m.status === "APROVADO").length,
+      statusAtual: dadosAtuais.status
+    });
+
+    // Se não há mais pendentes E o projeto ainda está como PENDENTE
+    if (pendentes === 0 && dadosAtuais.status === "PENDENTE") {
       try {
         if (reprovados > 0) {
+          console.log("🚨 REPROVANDO PROJETO - há itens reprovados");
           await apiFetch(`/api/projetos/${projetoId}/reprovar/`, { method: "POST" });
-          setProjetoData((prev) => (prev ? { ...prev, status: "REPROVADO" } : prev));
-          alert("❌ Projeto reprovado automaticamente (há itens reprovados).");
+          setProjetoData(prev => prev ? { ...prev, status: "REPROVADO" } : prev);
+          mostrarMensagem("❌ Projeto reprovado (há itens reprovados).", "sucesso");
         } else {
+          console.log("🎉 APROVANDO PROJETO - todos os itens aprovados");
           await apiFetch(`/api/projetos/${projetoId}/aprovar/`, { method: "POST" });
-          setProjetoData((prev) => (prev ? { ...prev, status: "APROVADO" } : prev));
-          alert("✅ Projeto aprovado automaticamente (todos os itens aprovados).");
+          setProjetoData(prev => prev ? { ...prev, status: "APROVADO" } : prev);
+          mostrarMensagem("✅ Projeto aprovado (todos os itens aprovados).", "sucesso");
         }
       } catch (err) {
         console.error("Erro ao atualizar status do projeto:", err);
+        mostrarMensagem("Erro ao atualizar status do projeto", "erro");
       }
+    } else {
+      console.log("⏳ Ainda há itens pendentes ou projeto já foi processado");
+    }
+  };
+
+  // ✅ Aprovar material individual
+  const handleAprovarMaterial = async (ambienteId: number, materialId: number) => {
+    setCarregandoAcao({ materialId, tipo: 'aprovar' });
+    
+    try {
+      await aprovarMaterial(materialId);
+
+      // Atualiza o estado local
+      setProjetoData(prev => {
+        if (!prev) return prev;
+        
+        const novoProjetoData = {
+          ...prev,
+          ambientes: prev.ambientes.map((ambiente) =>
+            ambiente.id === ambienteId
+              ? {
+                  ...ambiente,
+                  materials: ambiente.materials.map((m) =>
+                    m.id === materialId
+                      ? {
+                          ...m,
+                          status: "APROVADO",
+                          data_aprovacao: new Date().toISOString(),
+                        }
+                      : m
+                  ),
+                }
+              : ambiente
+          ),
+        };
+
+        // 🔄 CHAMA A VERIFICAÇÃO DIRETAMENTE APÓS ATUALIZAR
+        setTimeout(() => {
+          verificarEAtualizarStatusProjeto(novoProjetoData);
+        }, 100);
+
+        return novoProjetoData;
+      });
+
+      setObservacoesTemp((prev) => {
+        const novo = { ...prev };
+        delete novo[materialId];
+        return novo;
+      });
+
+      // ✅ MENSAGEM PARA APROVAÇÃO INDIVIDUAL
+      mostrarMensagem("✅ Material aprovado com sucesso!", "sucesso");
+      console.log("✅ Material aprovado:", { ambienteId, materialId });
+
+    } catch (error: any) {
+      console.error("Erro ao aprovar material:", error);
+      mostrarMensagem("Erro ao aprovar material: " + error.message, "erro");
+    } finally {
+      setCarregandoAcao({ materialId: null, tipo: null });
+    }
+  };
+
+  // ❌ Reprovar material individual
+  const handleReprovarMaterial = async (ambienteId: number, materialId: number) => {
+    setCarregandoAcao({ materialId, tipo: 'reprovar' });
+    
+    const motivo = observacoesTemp[materialId] || "Item reprovado sem observações específicas";
+
+    try {
+      await reprovarMaterial(materialId, motivo);
+
+      // Atualiza o estado local
+      setProjetoData(prev => {
+        if (!prev) return prev;
+        
+        const novoProjetoData = {
+          ...prev,
+          ambientes: prev.ambientes.map((ambiente) =>
+            ambiente.id === ambienteId
+              ? {
+                  ...ambiente,
+                  materials: ambiente.materials.map((m) =>
+                    m.id === materialId
+                      ? {
+                          ...m,
+                          status: "REPROVADO",
+                          motivo,
+                          data_aprovacao: new Date().toISOString(),
+                        }
+                      : m
+                  ),
+                }
+              : ambiente
+          ),
+        };
+
+        // 🔄 CHAMA A VERIFICAÇÃO DIRETAMENTE APÓS ATUALIZAR
+        setTimeout(() => {
+          verificarEAtualizarStatusProjeto(novoProjetoData);
+        }, 100);
+
+        return novoProjetoData;
+      });
+
+      setObservacoesTemp((prev) => {
+        const novo = { ...prev };
+        delete novo[materialId];
+        return novo;
+      });
+
+      // ❌ SEM MENSAGEM INDIVIDUAL DE REPROVAÇÃO
+      console.log("❌ Material reprovado:", { ambienteId, materialId, motivo });
+
+    } catch (error: any) {
+      console.error("Erro ao reprovar material:", error);
+      mostrarMensagem("Erro ao reprovar material: " + error.message, "erro");
+    } finally {
+      setCarregandoAcao({ materialId: null, tipo: null });
     }
   };
 
@@ -107,92 +251,6 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     );
   }
 
-  const handleAprovarMaterial = async (ambienteId: number, materialId: number) => {
-    try {
-      await aprovarMaterial(materialId);
-
-      setProjetoData((prev) => {
-        if (!prev) return prev;
-        const atualizado = {
-          ...prev,
-          ambientes: prev.ambientes.map((ambiente) =>
-            ambiente.id === ambienteId
-              ? {
-                  ...ambiente,
-                  materials: ambiente.materials.map((m) =>
-                    m.id === materialId
-                      ? {
-                          ...m,
-                          status: "APROVADO",
-                          data_aprovacao: new Date().toISOString(),
-                        }
-                      : m
-                  ),
-                }
-              : ambiente
-          ),
-        };
-        verificarStatusProjeto(atualizado);
-        return atualizado;
-      });
-
-      setObservacoesTemp((prev) => {
-        const novo = { ...prev };
-        delete novo[materialId];
-        return novo;
-      });
-
-      console.log("✅ Material aprovado:", { ambienteId, materialId });
-    } catch (error: any) {
-      alert("Erro ao aprovar material: " + error.message);
-    }
-  };
-
-  const handleReprovarMaterial = async (ambienteId: number, materialId: number) => {
-    const motivo =
-      observacoesTemp[materialId] || "Item reprovado sem observações específicas";
-
-    try {
-      await reprovarMaterial(materialId, motivo);
-
-      setProjetoData((prev) => {
-        if (!prev) return prev;
-        const atualizado = {
-          ...prev,
-          ambientes: prev.ambientes.map((ambiente) =>
-            ambiente.id === ambienteId
-              ? {
-                  ...ambiente,
-                  materials: ambiente.materials.map((m) =>
-                    m.id === materialId
-                      ? {
-                          ...m,
-                          status: "REPROVADO",
-                          motivo,
-                          data_aprovacao: new Date().toISOString(),
-                        }
-                      : m
-                  ),
-                }
-              : ambiente
-          ),
-        };
-        verificarStatusProjeto(atualizado);
-        return atualizado;
-      });
-
-      setObservacoesTemp((prev) => {
-        const novo = { ...prev };
-        delete novo[materialId];
-        return novo;
-      });
-
-      console.log("❌ Material reprovado:", { ambienteId, materialId, motivo });
-    } catch (error: any) {
-      alert("Erro ao reprovar material: " + error.message);
-    }
-  };
-
   const handleSalvarObservacao = (materialId: number, observacao: string) => {
     setObservacoesTemp((prev) => ({
       ...prev,
@@ -216,14 +274,6 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
   const materiaisPendentes = projetoData.ambientes.reduce((total, ambiente) => {
     return total + ambiente.materials.filter((m) => m.status === "PENDENTE").length;
   }, 0);
-
-  const toggleTodosAmbientes = (expandir: boolean) => {
-    const novoEstado: { [key: number]: boolean } = {};
-    projetoData.ambientes.forEach((ambiente) => {
-      novoEstado[ambiente.id] = !expandir;
-    });
-    setAmbientesContraidos(novoEstado);
-  };
 
   return (
     <div>
@@ -259,6 +309,22 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Sistema de Mensagens */}
+      {mensagem && (
+        <div
+          className={`alert ${
+            mensagem.tipo === "sucesso" ? "alert-success" : "alert-danger"
+          } alert-dismissible fade show mb-4`}
+        >
+          {mensagem.texto}
+          <button 
+            type="button" 
+            className="btn-close" 
+            onClick={() => setMensagem(null)}
+          ></button>
+        </div>
+      )}
 
       {/* Resumo */}
       <div className="row mb-4">
@@ -300,7 +366,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
           return (
             <div key={ambiente.id} className="ambiente-card mb-4">
               <div className="card">
-                <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <div className="card-header btn-secondary text-white d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">
                     {ambiente.nome_do_ambiente}
                     <small className="ms-2 opacity-75">
@@ -330,7 +396,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
                             className="material-item row align-items-center mb-3 p-3 border rounded"
                           >
                             <div className="col-md-2">
-                              <strong>{m.item_label}</strong>
+                              <strong>{m.item}</strong>
                             </div>
                             <div className="col-md-4">
                               <textarea
@@ -345,16 +411,32 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
                             </div>
                             <div className="col-md-3 d-flex gap-2 justify-content-end">
                               <button
-                                className="btn btn-success btn-sm"
+                                className="btn btn-success"
                                 onClick={() => handleAprovarMaterial(ambiente.id, m.id)}
+                                disabled={carregandoAcao.materialId === m.id}
                               >
-                                Aprovar
+                                {carregandoAcao.materialId === m.id && carregandoAcao.tipo === 'aprovar' ? (
+                                  <>
+                                    <span className="spinner-border spinner-border-sm me-2"></span>
+                                    Aprovando...
+                                  </>
+                                ) : (
+                                  'Aprovar'
+                                )}
                               </button>
                               <button
-                                className="btn btn-danger btn-sm"
+                                className="btn btn-secondary"
                                 onClick={() => handleReprovarMaterial(ambiente.id, m.id)}
+                                disabled={carregandoAcao.materialId === m.id}
                               >
-                                Reprovar
+                                {carregandoAcao.materialId === m.id && carregandoAcao.tipo === 'reprovar' ? (
+                                  <>
+                                    <span className="spinner-border spinner-border-sm me-2"></span>
+                                    Reprovando...
+                                  </>
+                                ) : (
+                                  'Reprovar'
+                                )}
                               </button>
                             </div>
                           </div>
@@ -374,7 +456,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
                             }`}
                           >
                             <div className="col-md-3">
-                              <strong>{m.item_label}</strong>
+                              <strong>{m.item}</strong>
                             </div>
                             <div className="col-md-6 small">
                               {m.motivo && m.status === "REPROVADO" && (

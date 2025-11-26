@@ -1,5 +1,8 @@
 import React from "react";
 
+// ✅ NÃO importe Ambiente do mockData.ts aqui!
+//   Vamos definir o tipo local, compatível com o backend.
+
 interface Ambiente {
   id: number;
   nome_do_ambiente: string;

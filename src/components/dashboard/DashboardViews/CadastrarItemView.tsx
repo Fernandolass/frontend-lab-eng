@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { listarAmbientes, criarMaterial, listarMateriais, atualizarMaterialCRUD, deletarMaterial } from "../../../data/projects";
+import { apiFetch } from "../../../data/api";
 
 // Interfaces
 interface NovoItem {
   id?: number;
   nome: string;
-  descricao: string;
   ambientesSelecionados: number[];
 }
 
@@ -18,140 +18,166 @@ interface Material {
   ambiente_tipo?: number;
 }
 
+interface MaterialAPIResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Material[];
+}
+
 const CadastrarItemView: React.FC = () => {
   const [ambientes, setAmbientes] = useState<any[]>([]);
   const [materiais, setMateriais] = useState<Material[]>([]);
-  const [todosMateriais, setTodosMateriais] = useState<Material[]>([]);
   const [materiaisFiltrados, setMateriaisFiltrados] = useState<Material[]>([]);
   const [novoItem, setNovoItem] = useState<NovoItem>({ 
     nome: "", 
-    descricao: "", 
     ambientesSelecionados: [] 
   });
   const [loading, setLoading] = useState(false);
   const [carregando, setCarregando] = useState(true);
+  const [carregandoAmbientes, setCarregandoAmbientes] = useState(true);
   const [mensagem, setMensagem] = useState<{ texto: string; tipo: 'sucesso' | 'erro' } | null>(null);
   const [editando, setEditando] = useState(false);
-  const [termoBusca, setTermoBusca] = useState("");
+  const [pesquisaMaterial, setPesquisaMaterial] = useState("");
+
+  // Estados para edição
+  const [materialEditando, setMaterialEditando] = useState<Material | null>(null);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState<number | null>(null);
+  const [carregandoAcao, setCarregandoAcao] = useState<number | null>(null);
 
   // Estados de paginação
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  
-  // Nova paginação para resultados filtrados
-  const [currentPageFiltrados, setCurrentPageFiltrados] = useState(1);
   const itemsPerPage = 10;
 
-  // Paginação para ambientes
+  // Estados de paginação para ambientes
   const [currentPageAmbientes, setCurrentPageAmbientes] = useState(1);
   const itemsPerPageAmbientes = 10;
-
-  // Carregar ambientes apenas uma vez
-  useEffect(() => {
-    carregarAmbientes();
-  }, []);
-
-  // Carregar materiais quando a página mudar
-  useEffect(() => {
-    carregarMateriais();
-  }, [currentPage]);
-
-  // Resetar página de filtrados quando termo de busca mudar
-  useEffect(() => {
-    setCurrentPageFiltrados(1);
-  }, [termoBusca]);
-
-  // Calcular materiais paginados para exibição
-  const materiaisParaExibir = termoBusca ? materiaisFiltrados : materiais;
-  
-  // Paginação manual para resultados filtrados
-  const startIndex = (currentPageFiltrados - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const materiaisPaginados = materiaisParaExibir.slice(startIndex, endIndex);
-  const totalPagesFiltrados = Math.ceil(materiaisParaExibir.length / itemsPerPage);
-
-  // Paginação para ambientes
-  const totalPagesAmbientes = Math.ceil(ambientes.length / itemsPerPageAmbientes);
-  const startIndexAmbientes = (currentPageAmbientes - 1) * itemsPerPageAmbientes;
-  const ambientesPaginados = ambientes.slice(startIndexAmbientes, startIndexAmbientes + itemsPerPageAmbientes);
-
-  useEffect(() => {
-    // Filtrar materiais quando o termo de busca mudar
-    if (termoBusca.trim() === "") {
-      setMateriaisFiltrados(materiais);
-    } else {
-      const filtrados = todosMateriais.filter(material =>
-        material.item.toLowerCase().includes(termoBusca.toLowerCase()) ||
-        material.descricao.toLowerCase().includes(termoBusca.toLowerCase()) ||
-        (material.ambiente_nome && material.ambiente_nome.toLowerCase().includes(termoBusca.toLowerCase()))
-      );
-      setMateriaisFiltrados(filtrados);
-    }
-  }, [termoBusca, materiais, todosMateriais]);
-
-  const carregarAmbientes = async () => {
-    try {
-      const lista = await listarAmbientes();
-      setAmbientes(lista);
-    } catch (err) {
-      console.error("Erro ao carregar ambientes:", err);
-      mostrarMensagem("Erro ao carregar ambientes.", "erro");
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  // 🔧 CORREÇÃO: Função carregarMateriais única e corrigida
-  const carregarMateriais = async () => {
-    try {
-      const data = await listarMateriais(currentPage);
-      
-      // 🔧 CORREÇÃO: Atualizar estados de forma segura
-      const novosMateriais = data.results || [];
-      setMateriais(novosMateriais);
-      setMateriaisFiltrados(novosMateriais);
-
-      // Carregar TODOS os materiais para busca (apenas na primeira página)
-      if (currentPage === 1) {
-        try {
-          let todos: Material[] = [];
-          let page = 1;
-          let hasMore = true;
-
-          // Carrega TODAS as páginas
-          while (hasMore) {
-            const pageData = await listarMateriais(page);
-            const resultadosPagina = pageData.results || [];
-            todos = [...todos, ...resultadosPagina];
-            
-            // Verifica se tem mais páginas
-            hasMore = pageData.next !== null;
-            page++;
-            
-            // Safety limit
-            if (page > 50) break;
-          }
-          
-          setTodosMateriais(todos);
-        } catch (err) {
-          console.error("Erro ao carregar todos materiais:", err);
-        }
-      }
-
-      if (data.count && data.results) {
-        const pageSize = data.results.length;
-        setTotalPages(Math.ceil(data.count / pageSize));
-      }
-    } catch (err) {
-      console.error("Erro ao carregar materiais:", err);
-      mostrarMensagem("Erro ao carregar materiais.", "erro");
-    }
-  };
 
   const mostrarMensagem = (texto: string, tipo: 'sucesso' | 'erro') => {
     setMensagem({ texto, tipo });
     setTimeout(() => setMensagem(null), 5000);
   };
+
+  // 🔄 LÓGICA DE CARREGAMENTO
+  const carregarTodosMateriais = async (): Promise<Material[]> => {
+    try {
+      let todosMateriais: Material[] = [];
+      let nextUrl: string | null = "/api/materiais/";
+
+      while (nextUrl) {
+        const response: MaterialAPIResponse = await apiFetch(nextUrl);
+        
+        let materiaisDaPagina: Material[] = [];
+        let nextPageUrl: string | null = null;
+        
+        if (Array.isArray(response)) {
+          materiaisDaPagina = response;
+          nextPageUrl = null;
+        } else if (response && typeof response === 'object' && Array.isArray(response.results)) {
+          materiaisDaPagina = response.results;
+          nextPageUrl = response.next ? response.next.replace(/^.*\/\/[^/]+/, '') : null;
+        } else {
+          console.warn("⚠️ Formato de resposta inesperado:", response);
+          break;
+        }
+        
+        todosMateriais = [...todosMateriais, ...materiaisDaPagina];
+        nextUrl = nextPageUrl;
+        
+        if (todosMateriais.length >= 1000) {
+          console.warn("⚠️ Limite de 1000 materiais atingido");
+          break;
+        }
+      }
+
+      return todosMateriais;
+    } catch (error) {
+      console.error("❌ Erro ao carregar materiais:", error);
+      throw error;
+    }
+  };
+
+  // 🔄 FILTRO/PESQUISA - Apenas por item
+  useEffect(() => {
+    if (pesquisaMaterial.trim() === "") {
+      setMateriaisFiltrados(materiais);
+      setCurrentPage(1);
+    } else {
+      const termoPesquisa = pesquisaMaterial.toLowerCase().trim();
+      const filtrados = materiais.filter(material => {
+        const nomeItem = material.item.toLowerCase();
+        return nomeItem.includes(termoPesquisa);
+      });
+      setMateriaisFiltrados(filtrados);
+      setCurrentPage(1);
+    }
+  }, [pesquisaMaterial, materiais]);
+
+  // CARREGA AMBIENTES
+  useEffect(() => {
+    const carregarAmbientes = async () => {
+      try {
+        setCarregandoAmbientes(true);
+        const lista = await listarAmbientes();
+        
+        const ambientesComTipo = lista.map(ambiente => ({
+          ...ambiente,
+          tipo: ambiente.categoria === "PRIVATIVA" ? 1 : 
+                ambiente.categoria === "COMUM" ? 2 : 0
+        }));
+        
+        setAmbientes(ambientesComTipo);
+      } catch (err) {
+        console.error("Erro ao carregar ambientes:", err);
+        mostrarMensagem("Erro ao carregar ambientes.", "erro");
+      } finally {
+        setCarregandoAmbientes(false);
+      }
+    };
+    carregarAmbientes();
+  }, []);
+
+  // 🔄 CARREGAMENTO DE MATERIAIS
+  useEffect(() => {
+    const carregarMateriais = async () => {
+      try {
+        setCarregando(true);
+        const todosMateriais = await carregarTodosMateriais();
+        setMateriais(todosMateriais);
+        setMateriaisFiltrados(todosMateriais);
+        console.log(`✅ Carregados ${todosMateriais.length} materiais`);
+      } catch (error) {
+        console.error("Erro ao carregar materiais:", error);
+        mostrarMensagem("Erro ao carregar materiais.", "erro");
+      } finally {
+        setCarregando(false);
+      }
+    };
+    carregarMateriais();
+  }, []);
+
+  // Resetar página de ambientes quando a lista mudar
+  useEffect(() => {
+    setCurrentPageAmbientes(1);
+  }, [ambientes]);
+
+  // Lógica de paginação para ambientes
+  const totalAmbientes = ambientes.length;
+  const totalPagesAmbientes = Math.max(1, Math.ceil(totalAmbientes / itemsPerPageAmbientes));
+  const startIndexAmbientes = (currentPageAmbientes - 1) * itemsPerPageAmbientes;
+  const ambientesPaginados = ambientes.slice(startIndexAmbientes, startIndexAmbientes + itemsPerPageAmbientes);
+
+  // Lógica de paginação para materiais filtrados
+  const totalItems = materiaisFiltrados.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedMateriais = materiaisFiltrados.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   const toggleAmbiente = (ambienteId: number) => {
     setNovoItem(prev => ({
@@ -177,8 +203,8 @@ const CadastrarItemView: React.FC = () => {
   };
 
   const handleCriarItem = async () => {
-    if (!novoItem.nome.trim() || !novoItem.descricao.trim()) {
-      mostrarMensagem("Preencha o nome e a descrição do item!", "erro");
+    if (!novoItem.nome.trim()) {
+      mostrarMensagem("Digite o nome do item!", "erro");
       return;
     }
 
@@ -190,11 +216,11 @@ const CadastrarItemView: React.FC = () => {
     setLoading(true);
     try {
       if (editando && novoItem.id) {
-        // Atualizar material existente
+        // 🔧 CORREÇÃO: Para edição, apenas atualiza o item existente
         await atualizarMaterialCRUD(novoItem.id, {
           ambiente: novoItem.ambientesSelecionados[0],
           item: novoItem.nome.trim(),
-          descricao: novoItem.descricao.trim(),
+          descricao: "", // Descrição vazia pois não é mais usada
         });
         mostrarMensagem("Item atualizado com sucesso!", "sucesso");
       } else {
@@ -203,7 +229,7 @@ const CadastrarItemView: React.FC = () => {
           criarMaterial({
             ambiente: ambienteId,
             item: novoItem.nome.trim(),
-            descricao: novoItem.descricao.trim(),
+            descricao: "", // Descrição vazia pois não é mais usada
           })
         );
 
@@ -214,15 +240,14 @@ const CadastrarItemView: React.FC = () => {
       // Limpar formulário
       setNovoItem({ 
         nome: "", 
-        descricao: "", 
         ambientesSelecionados: [] 
       });
       setEditando(false);
 
-      // 🔧 CORREÇÃO: Recarregar lista e resetar paginação
-      setCurrentPage(1);
-      setCurrentPageFiltrados(1);
-      await carregarMateriais();
+      // Recarregar lista
+      const todosMateriais = await carregarTodosMateriais();
+      setMateriais(todosMateriais);
+      setMateriaisFiltrados(todosMateriais);
 
     } catch (err: any) {
       console.error("Erro ao criar/editar item:", err);
@@ -244,49 +269,68 @@ const CadastrarItemView: React.FC = () => {
     }
   };
 
-  const handleEditarItem = (material: Material) => {
-    setNovoItem({
-      id: material.id,
-      nome: material.item,
-      descricao: material.descricao,
-      ambientesSelecionados: [material.ambiente]
-    });
-    setEditando(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleCancelarEdicao = () => {
-    setNovoItem({ 
-      nome: "", 
-      descricao: "", 
-      ambientesSelecionados: [] 
-    });
-    setEditando(false);
-  };
-
-  const handleExcluirItem = async (id: number) => {
-  if (window.confirm("Tem certeza que deseja excluir este item?")) {
-    try {
-      await deletarMaterial(id);
-      mostrarMensagem("Item excluído com sucesso!", "sucesso");
-    } catch (err: any) {
-      console.error("Erro ao excluir item:", err);
-      
-      // Se for 404, o item já não existe no servidor - consideramos sucesso
-      if (err?.message?.includes("404") || err?.message?.includes("Not Found")) {
-        mostrarMensagem("Item removido com sucesso!", "sucesso");
-      } else {
-        mostrarMensagem("Erro ao excluir item. Tente novamente.", "erro");
-        return; // Não remove da lista se for outro erro
-      }
-    }
+  // 🔧 CORREÇÃO: Função de edição apenas do nome do item
+  const handleEditarMaterial = async () => {
+    if (!materialEditando) return;
     
-    // Remove o item de todas as listas locais
-    setMateriais(prev => prev.filter(material => material.id !== id));
-    setMateriaisFiltrados(prev => prev.filter(material => material.id !== id));
-    setTodosMateriais(prev => prev.filter(material => material.id !== id));
-  }
-};
+    if (!materialEditando.item.trim()) {
+      mostrarMensagem("Digite o nome do item!", "erro");
+      return;
+    }
+
+    setCarregandoAcao(materialEditando.id);
+    try {
+      const materialAtualizado = await atualizarMaterialCRUD(materialEditando.id, {
+        ambiente: materialEditando.ambiente,
+        item: materialEditando.item,
+        descricao: "", // Descrição vazia
+      });
+
+      // Atualiza a lista local
+      setMateriais(prev => prev.map(m => 
+        m.id === materialEditando.id ? materialAtualizado : m
+      ));
+      setMateriaisFiltrados(prev => prev.map(m => 
+        m.id === materialEditando.id ? materialAtualizado : m
+      ));
+
+      setMaterialEditando(null);
+      mostrarMensagem("✅ Item atualizado com sucesso!", "sucesso");
+    } catch (error: any) {
+      console.error("Erro ao editar item:", error);
+      mostrarMensagem("Erro ao editar item.", "erro");
+    } finally {
+      setCarregandoAcao(null);
+    }
+  };
+
+  const handleExcluirMaterial = async (materialId: number) => {
+    setCarregandoAcao(materialId);
+    setConfirmandoExclusao(null);
+    
+    try {
+      await deletarMaterial(materialId);
+      
+      // Remove da lista local
+      setMateriais(prev => prev.filter(m => m.id !== materialId));
+      setMateriaisFiltrados(prev => prev.filter(m => m.id !== materialId));
+      
+      mostrarMensagem("✅ Item excluído com sucesso!", "sucesso");
+    } catch (error: any) {
+      console.error("Erro ao excluir item:", error);
+      mostrarMensagem("Erro ao excluir item.", "erro");
+    } finally {
+      setCarregandoAcao(null);
+    }
+  };
+
+  const iniciarEdicao = (material: Material) => {
+    setMaterialEditando({...material});
+  };
+
+  const cancelarEdicao = () => {
+    setMaterialEditando(null);
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -294,7 +338,7 @@ const CadastrarItemView: React.FC = () => {
     }
   };
 
-  if (carregando) {
+  if (carregandoAmbientes) {
     return (
       <div className="text-center p-4">
         <div className="spinner-border text-primary" role="status">
@@ -321,25 +365,14 @@ const CadastrarItemView: React.FC = () => {
 
       <form onKeyPress={handleKeyPress}>
         <div className="row mb-3">
-          <div className="col-md-6">
+          <div className="col-md-12">
             <label className="form-label">Nome do Item</label>
             <input
               type="text"
-              placeholder="Ex: Piso, Parede, Teto, Porta..."
+              placeholder="Ex: Piso, Parede, Teto, Porta"
               className="form-control"
               value={novoItem.nome}
               onChange={(e) => setNovoItem({ ...novoItem, nome: e.target.value })}
-            />
-          </div>
-
-          <div className="col-md-6">
-            <label className="form-label">Descrição</label>
-            <input
-              type="text"
-              placeholder="Descreva as especificações do item..."
-              className="form-control"
-              value={novoItem.descricao}
-              onChange={(e) => setNovoItem({ ...novoItem, descricao: e.target.value })}
             />
           </div>
         </div>
@@ -349,43 +382,17 @@ const CadastrarItemView: React.FC = () => {
           <div className="d-flex justify-content-between align-items-center mb-3">
             <label className="form-label h5 mb-0">Selecione os Ambientes</label>
             <div className="d-flex align-items-center gap-2">
-              {/* Paginação para ambientes */}
               {totalPagesAmbientes > 1 && (
                 <nav>
                   <ul className="pagination pagination-sm mb-0">
                     <li className={`page-item ${currentPageAmbientes === 1 ? 'disabled' : ''}`}>
-                      <button 
-                        className="page-link" 
-                        onClick={() => setCurrentPageAmbientes(prev => prev - 1)}
-                        disabled={currentPageAmbientes === 1}
-                      >
-                        &laquo;
-                      </button>
-                    </li>
-                    <li className="page-item disabled">
-                      <span className="page-link">
-                        {currentPageAmbientes}/{totalPagesAmbientes}
-                      </span>
-                    </li>
-                    <li className={`page-item ${currentPageAmbientes === totalPagesAmbientes ? 'disabled' : ''}`}>
-                      <button 
-                        className="page-link" 
-                        onClick={() => {
-                          if (currentPageAmbientes < totalPagesAmbientes) {
-                            setCurrentPageAmbientes(prev => prev + 1);
-                          }
-                        }}
-                        disabled={currentPageAmbientes === totalPagesAmbientes}
-                      >
-                        &raquo;
-                      </button>
                     </li>
                   </ul>
                 </nav>
               )}
               <button
                 type="button"
-                className="btn btn-outline-primary btn-sm"
+                className="btn btn-primary btn-sm"
                 onClick={toggleTodosAmbientes}
               >
                 {novoItem.ambientesSelecionados.length === ambientes.length 
@@ -407,9 +414,9 @@ const CadastrarItemView: React.FC = () => {
                 {ambiente.nome}{" "}
                 <span className="text-muted">
                   (
-                  {ambiente.tipo === 1
+                  {ambiente.categoria === "PRIVATIVA"
                     ? "Área Privativa"
-                    : ambiente.tipo === 2
+                    : ambiente.categoria === "COMUM"
                     ? "Área Comum"
                     : "Área Indefinida"}
                   )
@@ -425,6 +432,7 @@ const CadastrarItemView: React.FC = () => {
                 <ul className="pagination pagination-sm">
                   <li className={`page-item ${currentPageAmbientes === 1 ? 'disabled' : ''}`}>
                     <button 
+                      type="button"
                       className="page-link" 
                       onClick={() => setCurrentPageAmbientes(prev => prev - 1)}
                       disabled={currentPageAmbientes === 1}
@@ -439,12 +447,9 @@ const CadastrarItemView: React.FC = () => {
                   </li>
                   <li className={`page-item ${currentPageAmbientes === totalPagesAmbientes ? 'disabled' : ''}`}>
                     <button 
+                      type="button"
                       className="page-link" 
-                      onClick={() => {
-                        if (currentPageAmbientes < totalPagesAmbientes) {
-                          setCurrentPageAmbientes(prev => prev + 1);
-                        }
-                      }}
+                      onClick={() => setCurrentPageAmbientes(prev => prev + 1)}
                       disabled={currentPageAmbientes === totalPagesAmbientes}
                     >
                       Próxima
@@ -471,16 +476,19 @@ const CadastrarItemView: React.FC = () => {
             <button
               type="button"
               className="btn btn-secondary me-2 px-4"
-              onClick={handleCancelarEdicao}
+              onClick={() => {
+                setNovoItem({ nome: "", ambientesSelecionados: [] });
+                setEditando(false);
+              }}
               disabled={loading}
             >
               Cancelar Edição
             </button>
           )}
           <button
-            className="btn btn-primary px-4 "
+            className="btn btn-primary px-4"
             onClick={handleCriarItem}
-            disabled={loading || !novoItem.nome.trim() || !novoItem.descricao.trim() || novoItem.ambientesSelecionados.length === 0}
+            disabled={loading || !novoItem.nome.trim() || novoItem.ambientesSelecionados.length === 0}
           >
             {loading ? (
               <>
@@ -488,125 +496,229 @@ const CadastrarItemView: React.FC = () => {
                 {editando ? "Salvando..." : "Criando..."}
               </>
             ) : (
-              editando ? "Editar Item" : "Criar Item"
+              editando ? "Atualizar Item" : "Criar Item"
             )}
           </button>
         </div>
       </form>
 
-      {/* Lista de Itens - CRUD */}
-      <h2 className="content-header bold">Lista de Itens</h2>
+      <h2 className="content-header bold">Lista de itens</h2>
       
-      {/* Barra de pesquisa */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <div className="input-group" style={{ width: "500px" }}>
-          <span className="input-group-text">
-            <i className="bi bi-search"></i>
-          </span>
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Buscar por nome, descrição ou ambiente..."
-            value={termoBusca}
-            onChange={(e) => setTermoBusca(e.target.value)}
-          />
+      <div className="row mb-4">
+        <div className="col-md-6">
+          <div className="input-group">
+            <span className="input-group-text">
+              <i className="bi bi-search"></i>
+            </span>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Pesquisar itens por nome..."
+              value={pesquisaMaterial}
+              onChange={(e) => setPesquisaMaterial(e.target.value)}
+            />
+            {pesquisaMaterial && (
+              <button
+                className="btn btn-outline-secondary"
+                type="button"
+                onClick={() => setPesquisaMaterial("")}
+              >
+                <i className="bi bi-x"></i>
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="col-md-6">
+          {pesquisaMaterial && (
+            <div className="d-flex align-items-center h-100">
+              <small className="text-muted">
+                {materiaisFiltrados.length} de {materiais.length} item(s) encontrado(s)
+              </small>
+            </div>
+          )}
         </div>
       </div>
 
-      {materiaisParaExibir.length === 0 ? (
-        <div className="text-center text-muted py-4">
-          {termoBusca ? "Nenhum item encontrado para sua pesquisa." : "Nenhum item cadastrado ainda."}
+      {carregando ? (
+        <div className="text-center p-4">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Carregando...</span>
+          </div>
+          <p className="mt-2 text-muted">Carregando itens...</p>
+        </div>
+      ) : materiaisFiltrados.length === 0 ? (
+        <div className="alert alert-info mb-0">
+          <i className="bi bi-info-circle me-2"></i>
+          {pesquisaMaterial ? (
+            <>Nenhum item encontrado para "<strong>{pesquisaMaterial}</strong>"</>
+          ) : (
+            "Nenhum item cadastrado ainda. Comece criando o primeiro item usando o formulário acima."
+          )}
         </div>
       ) : (
         <>
           <table className="table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Nome do Item</th>
-                <th>Descrição</th>
+                <th>Item</th>
+                <th>Material</th>
                 <th>Ambiente</th>
-                <th>Tipo Ambiente</th>
-                <th>Ações</th>
+                <th></th>
+                <th style={{ width: '150px' }}>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {materiaisPaginados.map((material) => (
+              {paginatedMateriais.map((material) => (
                 <tr key={material.id}>
-                  <td>{material.id}</td>
-                  <td>{material.item}</td>
-                  <td>{material.descricao}</td>
-                  <td>{material.ambiente_nome || `Ambiente ${material.ambiente}`}</td>
-                  <td>
-                    <span className={`badge ${material.ambiente_tipo === 1 ? 'bg-primary' : 'bg-success'}`}>
-                      {material.ambiente_tipo === 1 ? "Área Privativa" : "Área Comum"}
-                    </span>
-                  </td>
-                  <td>
-                    <button 
-                      className="btn btn-sm btn-primary me-2" 
-                      onClick={() => handleEditarItem(material)}
-                    >
-                      Editar
-                    </button>
-                    <button 
-                      className="btn btn-sm btn-secondary" 
-                      onClick={() => handleExcluirItem(material.id)}
-                    >
-                      Excluir
-                    </button>
-                  </td>
+                  {materialEditando?.id === material.id ? (
+                    // MODO EDIÇÃO
+                    <>
+                      <td>
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          value={materialEditando.item}
+                          onChange={(e) => setMaterialEditando({
+                            ...materialEditando,
+                            item: e.target.value
+                          })}
+                        />
+                      </td>
+                      <td>
+                        <span className="text-muted small">
+                          {material.descricao || "Sem descrição"}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge bg-secondary">
+                          {material.ambiente_nome || `Ambiente ${material.ambiente}`}
+                        </span>
+                      </td>
+                      <td>
+                      </td>
+                      <td>
+                        <div className="d-flex gap-1">
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={handleEditarMaterial}
+                            disabled={carregandoAcao === material.id}
+                          >
+                            {carregandoAcao === material.id ? (
+                              <span className="spinner-border spinner-border-sm" />
+                            ) : (
+                              'Salvar'
+                            )}
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={cancelarEdicao}
+                            disabled={carregandoAcao === material.id}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  ) : (
+                    // MODO VISUALIZAÇÃO
+                    <>
+                      <td>
+                        <span className="fw-semibold">
+                          {material.item}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="">
+                          {material.descricao || "Sem descrição"}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge bg-secondary">
+                          {material.ambiente_nome || `Ambiente ${material.ambiente}`}
+                        </span>
+                      </td>
+                      <td>
+                      </td>
+                      <td>
+                        <div className="d-flex gap-1">
+                          <button
+                            className="btn btn-primary btn-sm me-2"
+                            onClick={() => iniciarEdicao(material)}
+                            disabled={carregandoAcao === material.id}
+                          >
+                            Editar
+                          </button>
+                          {confirmandoExclusao === material.id ? (
+                            <div className="d-flex align-items-center gap-1">
+                              <span className="text-muted small">Confirmar?</span>
+                              <button
+                                className="btn btn-primary btn-sm"
+                                onClick={() => handleExcluirMaterial(material.id)}
+                                disabled={carregandoAcao === material.id}
+                              >
+                                {carregandoAcao === material.id ? (
+                                  <span className="spinner-border spinner-border-sm" />
+                                ) : (
+                                  '✓'
+                                )}
+                              </button>
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setConfirmandoExclusao(null)}
+                              >
+                                ✗
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => setConfirmandoExclusao(material.id)}
+                              disabled={carregandoAcao === material.id}
+                            >
+                              Excluir
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
 
-          {/* Paginação - Adaptada para pesquisa */}
-          {(totalPages > 1 && !termoBusca) || (totalPagesFiltrados > 1 && termoBusca) ? (
+          {/* Paginação */}
+          {totalPages > 1 && (
             <nav>
               <ul className="pagination justify-content-center">
-                <li className={`page-item ${(termoBusca ? currentPageFiltrados : currentPage) === 1 ? 'disabled' : ''}`}>
-                  <button 
-                    className="page-link" 
-                    onClick={() => {
-                      if (termoBusca) {
-                        setCurrentPageFiltrados(prev => prev - 1);
-                      } else {
-                        setCurrentPage(prev => prev - 1);
-                      }
-                    }}
-                    disabled={(termoBusca ? currentPageFiltrados : currentPage) === 1}
+                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                  <button
+                    type="button"
+                    className="page-link"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
                   >
                     Anterior
                   </button>
                 </li>
                 <li className="page-item disabled">
                   <span className="page-link">
-                    Página {termoBusca ? currentPageFiltrados : currentPage} de {termoBusca ? totalPagesFiltrados : totalPages}
+                    Página {currentPage} de {totalPages}
                   </span>
                 </li>
-                <li className={`page-item ${(termoBusca ? currentPageFiltrados : currentPage) === (termoBusca ? totalPagesFiltrados : totalPages) ? 'disabled' : ''}`}>
-                  <button 
-                    className="page-link" 
-                    onClick={() => {
-                      if (termoBusca) {
-                        if (currentPageFiltrados < totalPagesFiltrados) {
-                          setCurrentPageFiltrados(prev => prev + 1);
-                        }
-                      } else {
-                        if (currentPage < totalPages) {
-                          setCurrentPage(prev => prev + 1);
-                        }
-                      }
-                    }}
-                    disabled={(termoBusca ? currentPageFiltrados : currentPage) === (termoBusca ? totalPagesFiltrados : totalPages)}
+                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                  <button
+                    type="button"
+                    className="page-link"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
                   >
                     Próxima
                   </button>
                 </li>
               </ul>
             </nav>
-          ) : null}
+          )}
         </>
       )}
     </div>

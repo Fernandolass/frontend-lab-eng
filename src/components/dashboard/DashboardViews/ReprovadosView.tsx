@@ -16,8 +16,16 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
   const [projetoDetalhado, setProjetoDetalhado] = useState<any>(null);
   const [materialEditando, setMaterialEditando] = useState<{ambienteId: number, materialId: number} | null>(null);
   const [loading, setLoading] = useState<number | null>(null);
+  const [mensagem, setMensagem] = useState<{ texto: string; tipo: 'sucesso' | 'erro' } | null>(null);
   const itemsPerPage = 5;
 
+  // Sistema de mensagens
+  const mostrarMensagem = (texto: string, tipo: 'sucesso' | 'erro') => {
+    setMensagem({ texto, tipo });
+    setTimeout(() => setMensagem(null), 5000);
+  };
+
+  // Lista FIXA de itens disponíveis para teste
   const itensDisponiveis = [
     { id: 1, nome: 'Tijolo Baiano' },
     { id: 2, nome: 'Cimento CP II' },
@@ -31,6 +39,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
     { id: 10, nome: 'Janela de Alumínio' },
   ];
 
+  // Buscar projetos reprovados
   useEffect(() => {
     const fetchData = async () => {
       let allResults: ProjetoDetalhes[] = [];
@@ -49,6 +58,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
     fetchData();
   }, []);
 
+  // Carregar detalhes do projeto
   const carregarDetalhesProjeto = async (projetoId: number) => {
     try {
       const projeto = await obterProjeto(projetoId);
@@ -56,10 +66,11 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
       setProjetoDetalhado(projeto);
     } catch (error) {
       console.error('Erro ao carregar detalhes:', error);
-      alert('Erro ao carregar detalhes do projeto');
+      mostrarMensagem('Erro ao carregar detalhes do projeto', 'erro');
     }
   };
 
+  // Funções de edição
   const iniciarEdicao = async (projeto: ProjetoDetalhes) => {
     setProjetoEditando(projeto.id);
     await carregarDetalhesProjeto(projeto.id);
@@ -71,6 +82,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
     setMaterialEditando(null);
   };
 
+  // Verificar se um material foi reprovado
   const materialFoiReprovado = (material: any) => {
     const reprovado = material.status === 'reprovado' || 
            material.status?.toLowerCase().includes('reprovado') ||
@@ -79,15 +91,18 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
     return reprovado;
   };
 
+  // Iniciar edição de um material específico
   const iniciarEdicaoMaterial = (ambienteId: number, materialId: number) => {
     console.log(`✏️ Editando material: ambiente=${ambienteId}, material=${materialId}`);
     setMaterialEditando({ ambienteId, materialId });
   };
 
+  // Cancelar edição de um material
   const cancelarEdicaoMaterial = () => {
     setMaterialEditando(null);
   };
 
+  // Atualizar campo de um material
   const handleMaterialChange = (ambienteId: number, materialId: number, campo: string, valor: string) => {
     console.log(`✏️ Alterando ${campo} para:`, valor);
     setProjetoDetalhado((prev: any) => ({
@@ -105,6 +120,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
     }));
   };
 
+  // Selecionar novo item
   const selecionarNovoItem = (ambienteId: number, materialId: number, novoItem: string) => {
     console.log(`✅ Selecionando novo item: ${novoItem}`);
     if (novoItem) {
@@ -113,12 +129,14 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
     setMaterialEditando(null);
   };
 
+  // Salvar e reenviar
   const salvarEEnviar = async (projetoId: number) => {
     setLoading(projetoId);
     
     try {
       console.log('💾 Salvando alterações...', projetoDetalhado);
 
+      // Primeiro, atualizar os materiais que foram editados
       if (projetoDetalhado?.ambientes) {
         for (const ambiente of projetoDetalhado.ambientes) {
           for (const material of ambiente.materials) {
@@ -153,11 +171,14 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
 
               } catch (error) {
                 console.error(`❌ Erro ao atualizar material ${material.id}:`, error);
+                throw error;
               }
             }
           }
         }
       }
+
+      // Depois, atualizar o status do projeto
       console.log('🔄 Atualizando status do projeto para PENDENTE...');
       const response = await fetch(`http://127.0.0.1:8000/api/projetos/${projetoId}/`, {
         method: "PATCH",
@@ -178,21 +199,28 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
 
       console.log('✅ Projeto atualizado com sucesso');
 
-      alert('Projeto editado e reenviado para aprovação!');
+      // ✅ MENSAGEM DE SUCESSO
+      mostrarMensagem('✅ Projeto editado e reenviado para aprovação!', 'sucesso');
       
+      // Atualizar estado local
       setProjetoEditando(null);
       setProjetoDetalhado(null);
       setMaterialEditando(null);
+      
+      // Atualizar a lista local - remove da lista de reprovados
       setProjects(projects.filter(p => p.id !== projetoId));
       onProjetoReenviado(projetoId);
       
     } catch (error) {
       console.error('❌ Erro ao salvar projeto:', error);
-      alert('Erro ao salvar projeto. Verifique o console para mais detalhes.');
+      // ✅ MENSAGEM DE ERRO
+      mostrarMensagem('❌ Erro ao salvar projeto. Verifique o console para mais detalhes.', 'erro');
     } finally {
       setLoading(null);
     }
   };
+
+  // Filtragem e paginação
   const filteredProjects = projects.filter(project =>
     project.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     project.responsavel.toLowerCase().includes(searchTerm.toLowerCase())
@@ -207,6 +235,22 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
       <div className="content-header">
         <h1>Projetos Reprovados</h1>
       </div>
+
+      {/* Sistema de Mensagens */}
+      {mensagem && (
+        <div
+          className={`alert ${
+            mensagem.tipo === "sucesso" ? "alert-success" : "alert-danger"
+          } alert-dismissible fade show mb-4`}
+        >
+          {mensagem.texto}
+          <button 
+            type="button" 
+            className="btn-close" 
+            onClick={() => setMensagem(null)}
+          ></button>
+        </div>
+      )}
 
       {/* Barra de pesquisa */}
       <div className="search-bar mb-3 col-lg-6">
@@ -265,7 +309,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
                         </button>
                       ) : (
                         <button 
-                          className="btn btn-secondary btn-sm"
+                          className="btn btn-secondary"
                           onClick={cancelarEdicao}
                         >
                           Cancelar
@@ -285,7 +329,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
                             Editando Projeto: {projetoDetalhado.nome || projetoDetalhado.nome_do_projeto}
                           </h5>
                           <small className="text-muted">
-                            ⚠️ Clique nos itens reprovados para editá-los
+                          Clique nos itens reprovados para editá-los
                           </small>
                         </div>
 
@@ -346,7 +390,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
                                                         </small>
                                                         <button
                                                           type="button"
-                                                          className="btn btn-sm btn-outline-secondary ms-2"
+                                                          className="btn btn-outline-secondary ms-2"
                                                           onClick={cancelarEdicaoMaterial}
                                                         >
                                                           Fechar
@@ -427,7 +471,14 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
                             onClick={() => salvarEEnviar(project.id)}
                             disabled={loading === project.id}
                           >
-                            {loading === project.id ? 'Enviando...' : 'Confirmar Edição e Reenviar'}
+                            {loading === project.id ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-2"></span>
+                                Enviando...
+                              </>
+                            ) : (
+                              'Confirmar Edição e Reenviar'
+                            )}
                           </button>
                           <button
                             type="button"
