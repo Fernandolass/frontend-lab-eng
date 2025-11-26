@@ -127,7 +127,7 @@ const CadastrarMaterialView: React.FC = () => {
           materiaisDaPagina = response.results;
           nextPageUrl = response.next ? response.next.replace(/^.*\/\/[^/]+/, '') : null;
         } else {
-          console.warn("⚠️ Formato de resposta inesperado:", response);
+          console.warn(" Formato de resposta inesperado:", response);
           break;
         }
         
@@ -135,14 +135,14 @@ const CadastrarMaterialView: React.FC = () => {
         nextUrl = nextPageUrl;
         
         if (todosMateriais.length >= 1000) {
-          console.warn("⚠️ Limite de 1000 materiais atingido");
+          console.warn(" Limite de 1000 materiais atingido");
           break;
         }
       }
 
       return todosMateriais;
     } catch (error) {
-      console.error("❌ Erro ao carregar materiais:", error);
+      console.error(" Erro ao carregar materiais:", error);
       throw error;
     }
   };
@@ -239,7 +239,7 @@ const CadastrarMaterialView: React.FC = () => {
           setErroItens("Nenhum material cadastrado no sistema. Crie o primeiro material para gerar a lista de itens.");
         }
       } catch (error) {
-        console.error("❌ Erro ao carregar itens dos materiais:", error);
+        console.error(" Erro ao carregar itens dos materiais:", error);
         const errorMessage = error instanceof Error 
           ? `Erro ao carregar itens: ${error.message}`
           : "Erro ao carregar lista de itens. Tente recarregar a página.";
@@ -305,7 +305,7 @@ const CadastrarMaterialView: React.FC = () => {
       setItemSelecionado("");
       setPesquisaItem("");
       
-      mostrarMensagem("✅ Material criado com sucesso! Já está disponível para uso em todos os projetos.", "sucesso");
+      mostrarMensagem(" Material criado com sucesso! Já está disponível para uso em todos os projetos.", "sucesso");
     } catch (error: any) {
       console.error("Erro ao criar material:", error);
       
@@ -351,7 +351,7 @@ const CadastrarMaterialView: React.FC = () => {
       ));
 
       setMaterialEditando(null);
-      mostrarMensagem("✅ Material atualizado com sucesso!", "sucesso");
+      mostrarMensagem(" Material atualizado com sucesso!", "sucesso");
     } catch (error: any) {
       console.error("Erro ao editar material:", error);
       mostrarMensagem("Erro ao editar material.", "erro");
@@ -372,7 +372,7 @@ const CadastrarMaterialView: React.FC = () => {
       setMateriais(prev => prev.filter(m => m.id !== materialId));
       setMateriaisFiltrados(prev => prev.filter(m => m.id !== materialId));
       
-      mostrarMensagem("✅ Material excluído com sucesso!", "sucesso");
+      mostrarMensagem(" Material excluído com sucesso!", "sucesso");
     } catch (error: any) {
       console.error("Erro ao excluir material:", error);
       mostrarMensagem("Erro ao excluir material.", "erro");

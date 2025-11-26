@@ -35,17 +35,17 @@ const AprovadosView: React.FC<AprovadosViewProps> = ({ onViewDetails }) => {
     try {
       setBaixandoIds(prev => [...prev, projetoId]);
       
-      // ✅ Use a função centralizada do api.ts
+      // Use a função centralizada do api.ts
       
-      console.log('✅ PDF baixado com sucesso!');
+      console.log(' PDF baixado com sucesso!');
       
     } catch (error: any) {
-      console.error('❌ Erro ao baixar PDF:', error);
+      console.error(' Erro ao baixar PDF:', error);
       
       if (error.message.includes('404')) {
-        alert('❌ Endpoint de PDF não encontrado.');
+        alert(' Endpoint de PDF não encontrado.');
       } else {
-        alert('❌ Erro ao baixar PDF: ' + error.message);
+        alert(' Erro ao baixar PDF: ' + error.message);
       }
       
     } finally {

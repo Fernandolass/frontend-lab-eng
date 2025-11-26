@@ -43,7 +43,7 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
           total: stats.total_projetos,
         });
 
-        // 🔹 Mensais
+        //  Mensais
         const mensais = await apiFetch('/api/stats/mensais/');
         const monthlyArr = Object.entries(mensais).map(([mes, valores]: any) => ({
           mes,
@@ -51,7 +51,7 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
         }));
         setMonthlyData(monthlyArr.slice(-9)); // pega últimos 9 meses
 
-        // 🔹 Logs recentes
+        //  Logs recentes
         const logs = await apiFetch('/api/logs/');
         setRecentLogs(Array.isArray(logs) ? logs.slice(0, 5) : []);
       } catch (err) {
@@ -61,7 +61,7 @@ const InicioView: React.FC<InicioViewProps> = ({ onViewDetails }) => {
     carregarDados();
   }, []);
 
-  // 🔹 Normaliza altura das barras
+  //  Normaliza altura das barras
   const maxQtd = Math.max(...monthlyData.map(m => m.qtd), 1);
 
   return (

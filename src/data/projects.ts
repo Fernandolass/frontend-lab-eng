@@ -34,7 +34,7 @@ function mapProjeto(p: any): ProjetoDetalhes {
   };
 }
 
-// 🔹 agora com paginação e filtro de status
+//  agora com paginação e filtro de status
 export async function listarProjetos(
   page: number = 1,
   status?: "APROVADO" | "REPROVADO" | "PENDENTE"
@@ -247,7 +247,7 @@ export async function deletarMaterial(id: number) {
   });
 }
 
-// 🔹 Estes estavam no conflito — foram mantidos e integrados corretamente
+//  Estes estavam no conflito — foram mantidos e integrados corretamente
 export async function listarMateriaisGerais(): Promise<any[]> {
   const data = await apiFetch("/api/materiais-gerais/");
   return data.results || data;
@@ -394,7 +394,7 @@ export async function buscarItensProjeto(projetoId: number): Promise<any[]> {
   }
 }
 
-// 🔹 Atualizar projeto com os itens editados (para reenvio)
+//  Atualizar projeto com os itens editados (para reenvio)
 export async function atualizarProjetoComItens(
   projetoId: number, 
   dadosAtualizacao: {
@@ -526,7 +526,7 @@ export async function listarProjetosReprovadosComDetalhes(): Promise<ProjetoDeta
   }
 }
 
-// 🔹 Atualizar um material específico (para edição individual)
+//  Atualizar um material específico (para edição individual)
 export async function atualizarMaterial(
   materialId: number, 
   dados: {
@@ -548,7 +548,7 @@ export async function atualizarMaterial(
   });
 }
 
-// 🔹 Funções de contagem para o dashboard - Adicione estas funções no projects.ts
+//  Funções de contagem para o dashboard - Adicione estas funções no projects.ts
 
 export async function contarAmbientes(): Promise<number> {
   try {

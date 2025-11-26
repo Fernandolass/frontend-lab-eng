@@ -58,7 +58,7 @@ const CadastrarItemView: React.FC = () => {
     setTimeout(() => setMensagem(null), 5000);
   };
 
-  // 🔄 LÓGICA DE CARREGAMENTO
+  //  LÓGICA DE CARREGAMENTO
   const carregarTodosMateriais = async (): Promise<Material[]> => {
     try {
       let todosMateriais: Material[] = [];
@@ -77,7 +77,7 @@ const CadastrarItemView: React.FC = () => {
           materiaisDaPagina = response.results;
           nextPageUrl = response.next ? response.next.replace(/^.*\/\/[^/]+/, '') : null;
         } else {
-          console.warn("⚠️ Formato de resposta inesperado:", response);
+          console.warn(" Formato de resposta inesperado:", response);
           break;
         }
         
@@ -85,19 +85,19 @@ const CadastrarItemView: React.FC = () => {
         nextUrl = nextPageUrl;
         
         if (todosMateriais.length >= 1000) {
-          console.warn("⚠️ Limite de 1000 materiais atingido");
+          console.warn(" Limite de 1000 materiais atingido");
           break;
         }
       }
 
       return todosMateriais;
     } catch (error) {
-      console.error("❌ Erro ao carregar materiais:", error);
+      console.error(" Erro ao carregar materiais:", error);
       throw error;
     }
   };
 
-  // 🔄 FILTRO/PESQUISA - Apenas por item
+  //  FILTRO/PESQUISA - Apenas por item
   useEffect(() => {
     if (pesquisaMaterial.trim() === "") {
       setMateriaisFiltrados(materiais);
@@ -137,7 +137,7 @@ const CadastrarItemView: React.FC = () => {
     carregarAmbientes();
   }, []);
 
-  // 🔄 CARREGAMENTO DE MATERIAIS
+  //  CARREGAMENTO DE MATERIAIS
   useEffect(() => {
     const carregarMateriais = async () => {
       try {
@@ -145,7 +145,7 @@ const CadastrarItemView: React.FC = () => {
         const todosMateriais = await carregarTodosMateriais();
         setMateriais(todosMateriais);
         setMateriaisFiltrados(todosMateriais);
-        console.log(`✅ Carregados ${todosMateriais.length} materiais`);
+        console.log(` Carregados ${todosMateriais.length} materiais`);
       } catch (error) {
         console.error("Erro ao carregar materiais:", error);
         mostrarMensagem("Erro ao carregar materiais.", "erro");
@@ -269,7 +269,7 @@ const CadastrarItemView: React.FC = () => {
     }
   };
 
-  // 🔧 CORREÇÃO: Função de edição apenas do nome do item
+  //  CORREÇÃO: Função de edição apenas do nome do item
   const handleEditarMaterial = async () => {
     if (!materialEditando) return;
     
@@ -295,7 +295,7 @@ const CadastrarItemView: React.FC = () => {
       ));
 
       setMaterialEditando(null);
-      mostrarMensagem("✅ Item atualizado com sucesso!", "sucesso");
+      mostrarMensagem(" Item atualizado com sucesso!", "sucesso");
     } catch (error: any) {
       console.error("Erro ao editar item:", error);
       mostrarMensagem("Erro ao editar item.", "erro");
@@ -315,7 +315,7 @@ const CadastrarItemView: React.FC = () => {
       setMateriais(prev => prev.filter(m => m.id !== materialId));
       setMateriaisFiltrados(prev => prev.filter(m => m.id !== materialId));
       
-      mostrarMensagem("✅ Item excluído com sucesso!", "sucesso");
+      mostrarMensagem(" Item excluído com sucesso!", "sucesso");
     } catch (error: any) {
       console.error("Erro ao excluir item:", error);
       mostrarMensagem("Erro ao excluir item.", "erro");

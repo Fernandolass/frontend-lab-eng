@@ -62,7 +62,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
   const carregarDetalhesProjeto = async (projetoId: number) => {
     try {
       const projeto = await obterProjeto(projetoId);
-      console.log('📋 Projeto carregado:', projeto);
+      console.log(' Projeto carregado:', projeto);
       setProjetoDetalhado(projeto);
     } catch (error) {
       console.error('Erro ao carregar detalhes:', error);
@@ -87,7 +87,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
     const reprovado = material.status === 'reprovado' || 
            material.status?.toLowerCase().includes('reprovado') ||
            material.motivo_reprovacao;
-    console.log(`🔍 Material ${material.item}: status=${material.status}, reprovado=${reprovado}`);
+    console.log(` Material ${material.item}: status=${material.status}, reprovado=${reprovado}`);
     return reprovado;
   };
 
@@ -104,7 +104,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
 
   // Atualizar campo de um material
   const handleMaterialChange = (ambienteId: number, materialId: number, campo: string, valor: string) => {
-    console.log(`✏️ Alterando ${campo} para:`, valor);
+    console.log(`Alterando ${campo} para:`, valor);
     setProjetoDetalhado((prev: any) => ({
       ...prev,
       ambientes: prev.ambientes.map((amb: any) => 
@@ -122,7 +122,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
 
   // Selecionar novo item
   const selecionarNovoItem = (ambienteId: number, materialId: number, novoItem: string) => {
-    console.log(`✅ Selecionando novo item: ${novoItem}`);
+    console.log(` Selecionando novo item: ${novoItem}`);
     if (novoItem) {
       handleMaterialChange(ambienteId, materialId, 'item', novoItem);
     }
@@ -134,7 +134,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
     setLoading(projetoId);
     
     try {
-      console.log('💾 Salvando alterações...', projetoDetalhado);
+      console.log(' Salvando alterações...', projetoDetalhado);
 
       // Primeiro, atualizar os materiais que foram editados
       if (projetoDetalhado?.ambientes) {
@@ -142,7 +142,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
           for (const material of ambiente.materials) {
             if (materialFoiReprovado(material)) {
               try {
-                console.log(`📝 Atualizando material ${material.id}:`, {
+                console.log(` Atualizando material ${material.id}:`, {
                   item: material.item,
                   descricao: material.descricao
                 });
@@ -163,14 +163,14 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
 
                 if (!response.ok) {
                   const errorData = await response.json();
-                  console.error(`❌ Erro ao atualizar material ${material.id}:`, errorData);
+                  console.error(` Erro ao atualizar material ${material.id}:`, errorData);
                   throw new Error(`Erro ao atualizar material: ${JSON.stringify(errorData)}`);
                 }
 
-                console.log(`✅ Material ${material.id} atualizado com sucesso`);
+                console.log(` Material ${material.id} atualizado com sucesso`);
 
               } catch (error) {
-                console.error(`❌ Erro ao atualizar material ${material.id}:`, error);
+                console.error(` Erro ao atualizar material ${material.id}:`, error);
                 throw error;
               }
             }
@@ -179,7 +179,7 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
       }
 
       // Depois, atualizar o status do projeto
-      console.log('🔄 Atualizando status do projeto para PENDENTE...');
+      console.log(' Atualizando status do projeto para PENDENTE...');
       const response = await fetch(`http://127.0.0.1:8000/api/projetos/${projetoId}/`, {
         method: "PATCH",
         headers: {
@@ -193,14 +193,14 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('❌ Erro ao atualizar projeto:', errorData);
+        console.error(' Erro ao atualizar projeto:', errorData);
         throw new Error(`Erro ao atualizar projeto: ${JSON.stringify(errorData)}`);
       }
 
-      console.log('✅ Projeto atualizado com sucesso');
+      console.log(' Projeto atualizado com sucesso');
 
-      // ✅ MENSAGEM DE SUCESSO
-      mostrarMensagem('✅ Projeto editado e reenviado para aprovação!', 'sucesso');
+      //  MENSAGEM DE SUCESSO
+      mostrarMensagem(' Projeto editado e reenviado para aprovação!', 'sucesso');
       
       // Atualizar estado local
       setProjetoEditando(null);
@@ -212,9 +212,9 @@ const ReprovadosView: React.FC<ReprovadosViewProps> = ({ onViewDetails, onProjet
       onProjetoReenviado(projetoId);
       
     } catch (error) {
-      console.error('❌ Erro ao salvar projeto:', error);
-      // ✅ MENSAGEM DE ERRO
-      mostrarMensagem('❌ Erro ao salvar projeto. Verifique o console para mais detalhes.', 'erro');
+      console.error(' Erro ao salvar projeto:', error);
+      //  MENSAGEM DE ERRO
+      mostrarMensagem(' Erro ao salvar projeto. Verifique o console para mais detalhes.', 'erro');
     } finally {
       setLoading(null);
     }

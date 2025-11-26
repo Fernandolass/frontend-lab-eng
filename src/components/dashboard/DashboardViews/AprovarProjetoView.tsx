@@ -56,7 +56,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     setTimeout(() => setMensagem(null), 5000);
   };
 
-  // 🔹 Buscar projeto do backend
+  //  Buscar projeto do backend
   useEffect(() => {
     const carregarProjeto = async () => {
       if (!projetoId) return;
@@ -74,13 +74,13 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     carregarProjeto();
   }, [projetoId]);
 
-  // 🔹 Função para verificar e atualizar status do projeto
+  //  Função para verificar e atualizar status do projeto
   const verificarEAtualizarStatusProjeto = async (dadosAtuais: ProjetoDetalhes) => {
     const todosMateriais = dadosAtuais.ambientes.flatMap((a) => a.materials);
     const pendentes = todosMateriais.filter((m) => m.status === "PENDENTE").length;
     const reprovados = todosMateriais.filter((m) => m.status === "REPROVADO").length;
 
-    console.log("🔍 Verificando status do projeto:", { 
+    console.log(" Verificando status do projeto:", { 
       total: todosMateriais.length,
       pendentes, 
       reprovados,
@@ -92,26 +92,26 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     if (pendentes === 0 && dadosAtuais.status === "PENDENTE") {
       try {
         if (reprovados > 0) {
-          console.log("🚨 REPROVANDO PROJETO - há itens reprovados");
+          console.log(" REPROVANDO PROJETO - há itens reprovados");
           await apiFetch(`/api/projetos/${projetoId}/reprovar/`, { method: "POST" });
           setProjetoData(prev => prev ? { ...prev, status: "REPROVADO" } : prev);
-          mostrarMensagem("❌ Projeto reprovado (há itens reprovados).", "sucesso");
+          mostrarMensagem(" Projeto reprovado (há itens reprovados).", "sucesso");
         } else {
-          console.log("🎉 APROVANDO PROJETO - todos os itens aprovados");
+          console.log(" APROVANDO PROJETO - todos os itens aprovados");
           await apiFetch(`/api/projetos/${projetoId}/aprovar/`, { method: "POST" });
           setProjetoData(prev => prev ? { ...prev, status: "APROVADO" } : prev);
-          mostrarMensagem("✅ Projeto aprovado (todos os itens aprovados).", "sucesso");
+          mostrarMensagem(" Projeto aprovado (todos os itens aprovados).", "sucesso");
         }
       } catch (err) {
         console.error("Erro ao atualizar status do projeto:", err);
         mostrarMensagem("Erro ao atualizar status do projeto", "erro");
       }
     } else {
-      console.log("⏳ Ainda há itens pendentes ou projeto já foi processado");
+      console.log(" Ainda há itens pendentes ou projeto já foi processado");
     }
   };
 
-  // ✅ Aprovar material individual
+  //  Aprovar material individual
   const handleAprovarMaterial = async (ambienteId: number, materialId: number) => {
     setCarregandoAcao({ materialId, tipo: 'aprovar' });
     
@@ -142,7 +142,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
           ),
         };
 
-        // 🔄 CHAMA A VERIFICAÇÃO DIRETAMENTE APÓS ATUALIZAR
+        //  CHAMA A VERIFICAÇÃO DIRETAMENTE APÓS ATUALIZAR
         setTimeout(() => {
           verificarEAtualizarStatusProjeto(novoProjetoData);
         }, 100);
@@ -156,7 +156,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
         return novo;
       });
 
-      // ✅ MENSAGEM PARA APROVAÇÃO INDIVIDUAL
+      //  MENSAGEM PARA APROVAÇÃO INDIVIDUAL
       mostrarMensagem("✅ Material aprovado com sucesso!", "sucesso");
       console.log("✅ Material aprovado:", { ambienteId, materialId });
 
@@ -168,7 +168,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
     }
   };
 
-  // ❌ Reprovar material individual
+  //  Reprovar material individual
   const handleReprovarMaterial = async (ambienteId: number, materialId: number) => {
     setCarregandoAcao({ materialId, tipo: 'reprovar' });
     
@@ -202,7 +202,7 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
           ),
         };
 
-        // 🔄 CHAMA A VERIFICAÇÃO DIRETAMENTE APÓS ATUALIZAR
+        //  CHAMA A VERIFICAÇÃO DIRETAMENTE APÓS ATUALIZAR
         setTimeout(() => {
           verificarEAtualizarStatusProjeto(novoProjetoData);
         }, 100);
@@ -216,8 +216,8 @@ const AprovarProjetoView: React.FC<AprovarProjetoViewProps> = ({
         return novo;
       });
 
-      // ❌ SEM MENSAGEM INDIVIDUAL DE REPROVAÇÃO
-      console.log("❌ Material reprovado:", { ambienteId, materialId, motivo });
+      //  SEM MENSAGEM INDIVIDUAL DE REPROVAÇÃO
+      console.log(" Material reprovado:", { ambienteId, materialId, motivo });
 
     } catch (error: any) {
       console.error("Erro ao reprovar material:", error);

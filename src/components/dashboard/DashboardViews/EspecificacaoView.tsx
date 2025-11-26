@@ -14,7 +14,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
   const [loading, setLoading] = useState(true);
   const [descricoesPorItem, setDescricoesPorItem] = useState<Record<string, string[]>>({});
 
-  // 🔹 Função para carregar TODAS as descrições agrupadas por ITEM
+  //  Função para carregar TODAS as descrições agrupadas por ITEM
   const carregarDescricoesPorItem = async () => {
     try {
       let todosMateriaisAPI: any[] = [];
@@ -68,15 +68,15 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
         resultado[item] = Array.from(agrupado[item]).sort();
       });
 
-      console.log("✅ Descrições agrupadas por item:", resultado);
+      console.log(" Descrições agrupadas por item:", resultado);
       return resultado;
     } catch (error) {
-      console.error("❌ Erro ao carregar descrições:", error);
+      console.error(" Erro ao carregar descrições:", error);
       return {};
     }
   };
 
-  // 🔹 Nova função para carregar o projeto
+  //  Nova função para carregar o projeto
   const carregarProjeto = async () => {
     if (!projetoId) return;
     
@@ -97,7 +97,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
     }
   };
 
-  // 🔹 Carrega projeto e descrições disponíveis
+  //  Carrega projeto e descrições disponíveis
   useEffect(() => {
     const carregar = async () => {
       if (!projetoId) return;
@@ -123,7 +123,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
     carregar();
   }, [projetoId]);
 
-  // 🔹 Atualiza descrição existente (PATCH) E RECARREGA O PROJETO
+  //  Atualiza descrição existente (PATCH) E RECARREGA O PROJETO
   const handleChange = async (ambienteId: number, materialId: number, value: string) => {
     // Atualização otimista local
     setMateriaisPorAmbiente((prev) => ({
@@ -140,7 +140,7 @@ const EspecificacaoView: React.FC<EspecificacaoViewProps> = ({ onBack }) => {
         body: JSON.stringify({ descricao: value }),
       });
 
-      // 🔹 RECARREGA O PROJETO PARA ATUALIZAR A LISTA DE MARCAS
+      //  RECARREGA O PROJETO PARA ATUALIZAR A LISTA DE MARCAS
       await carregarProjeto();
       
     } catch (err) {

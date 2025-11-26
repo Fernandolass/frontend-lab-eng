@@ -191,7 +191,7 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext, modelos = [
       const modeloData = await response.json();
       console.log('🎯 Resposta COMPLETA da API:', modeloData);
       
-      // 👇 AGORA USE O CAMPO "projeto" DA RESPOSTA DIRETA
+      //  AGORA USE O CAMPO "projeto" DA RESPOSTA DIRETA
       if (modeloData.projeto) {
         console.log('🔍 Projeto ID encontrado:', modeloData.projeto);
         
@@ -203,7 +203,7 @@ const CriarProjetoView: React.FC<CriarProjetoViewProps> = ({ onNext, modelos = [
         
         if (projetoResponse.ok) {
           const projetoOriginal = await projetoResponse.json();
-          console.log('🏠 Projeto original encontrado:', projetoOriginal);
+          console.log(' Projeto original encontrado:', projetoOriginal);
           
           setModeloSelecionado(modeloData);
           setFormData(prev => ({

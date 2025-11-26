@@ -150,7 +150,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      // 1️⃣ Cria o projeto principal
+      // 1 Cria o projeto principal
       const projeto = await criarProjeto({
         nome_do_projeto: formData.nomeProjeto,
         tipo_do_projeto: formData.tipoProjeto,
@@ -158,7 +158,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         descricao: formData.descricao,
       });
 
-      // 2️⃣ Pega todos os ambientes que o usuário interagiu/alterou
+      // 2 Pega todos os ambientes que o usuário interagiu/alterou
       const ambientesSelecionados = Object.keys(materiaisPorAmbiente);
 
       for (const ambienteId of ambientesSelecionados) {
@@ -181,7 +181,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             item: m.item,
             descricao: m.descricao || "",
             marca: m.marca || null,
-            // ⚠️ Não enviar "status" — backend define automaticamente como PENDENTE
+            //  Não enviar "status" — backend define automaticamente como PENDENTE
           });
         }
       }

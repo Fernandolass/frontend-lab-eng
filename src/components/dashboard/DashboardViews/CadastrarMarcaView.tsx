@@ -34,7 +34,7 @@ const CadastrarMarcaView: React.FC = () => {
     setTimeout(() => setMensagem(null), 5000);
   };
 
-  // 🔹 Função para carregar TODOS os materiais do endpoint /api/materiais/
+  //  Função para carregar TODOS os materiais do endpoint /api/materiais/
   const carregarTodosMateriais = async () => {
     try {
       let todosMateriais: any[] = [];
@@ -56,7 +56,7 @@ const CadastrarMarcaView: React.FC = () => {
           materiaisDaPagina = response.data;
           nextPageUrl = response.next ? response.next.replace(/^.*\/\/[^/]+/, '') : null;
         } else {
-          console.warn("⚠️ Formato de resposta inesperado:", response);
+          console.warn(" Formato de resposta inesperado:", response);
           break;
         }
         
@@ -64,7 +64,7 @@ const CadastrarMarcaView: React.FC = () => {
         nextUrl = nextPageUrl;
         
         if (todosMateriais.length >= 2000) {
-          console.warn("⚠️ Limite de 2000 materiais atingido");
+          console.warn(" Limite de 2000 materiais atingido");
           break;
         }
       }
@@ -77,10 +77,10 @@ const CadastrarMarcaView: React.FC = () => {
           .map(desc => desc.trim()) // Remove espaços extras
       );
       
-      console.log("✅ Total de materiais únicos carregados:", materiaisSet.size);
+      console.log(" Total de materiais únicos carregados:", materiaisSet.size);
       return Array.from(materiaisSet).sort();
     } catch (error) {
-      console.error("❌ Erro ao listar materiais:", error);
+      console.error(" Erro ao listar materiais:", error);
       return [];
     }
   };
@@ -120,10 +120,10 @@ const CadastrarMarcaView: React.FC = () => {
         }
       }
 
-      console.log("✅ Total de marcas cadastradas:", todasMarcas.length);
+      console.log(" Total de marcas cadastradas:", todasMarcas.length);
       return todasMarcas;
     } catch (error) {
-      console.error("❌ Erro ao listar marcas:", error);
+      console.error(" Erro ao listar marcas:", error);
       return [];
     }
   };
@@ -147,7 +147,7 @@ const CadastrarMarcaView: React.FC = () => {
         const itemsPerPage = 10;
         setTotalPages(Math.ceil(marcas.length / itemsPerPage));
       } catch (error) {
-        console.error("❌ Erro ao carregar dados:", error);
+        console.error(" Erro ao carregar dados:", error);
         mostrarMensagem("Erro ao carregar dados", "erro");
       } finally {
         setCarregandoMateriais(false);
@@ -244,7 +244,7 @@ const CadastrarMarcaView: React.FC = () => {
           setCurrentPage(Math.max(1, Math.ceil(novoTotal / itemsPerPage)));
         }
       } catch (err) {
-        console.error("❌ Erro ao excluir:", err);
+        console.error(" Erro ao excluir:", err);
         mostrarMensagem("Erro ao excluir marca.", "erro");
       }
     }

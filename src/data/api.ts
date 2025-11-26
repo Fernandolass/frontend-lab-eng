@@ -77,7 +77,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 }
 
 /* ==========================================================
-   🔹 PDF / DOWNLOAD
+    PDF / DOWNLOAD
    ========================================================== */
 
 /**
@@ -92,7 +92,7 @@ export async function gerarPDFProjeto(projetoId: number): Promise<Blob> {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // ✅ REMOVA o cabeçalho Accept ou mude para application/json
+    //  REMOVA o cabeçalho Accept ou mude para application/json
     // headers['Accept'] = 'application/pdf'; // ← REMOVER ESTA LINHA
 
     const response = await fetch(`${BASE}/api/projetos/${projetoId}/download-especificacao/`, {
@@ -125,7 +125,7 @@ export async function gerarPDFProjeto(projetoId: number): Promise<Blob> {
     return blob;
 
   } catch (error) {
-    console.error('❌ Erro ao gerar PDF:', error);
+    console.error(' Erro ao gerar PDF:', error);
     throw error;
   }
 }
@@ -147,7 +147,7 @@ export async function downloadPDFProjeto(projetoId: number, projetoNome: string)
 }
 
 /* ==========================================================
-   🔹 GET DETALHES DE PROJETO (com materiais filtrados por projeto)
+   GET DETALHES DE PROJETO (com materiais filtrados por projeto)
    ========================================================== */
 export async function getProjetoDetalhes(id: number) {
   const projeto = await apiFetch(`/api/projetos/${id}/`);
@@ -165,7 +165,7 @@ export async function getProjetoDetalhes(id: number) {
 }
 
 /* ==========================================================
-   🔹 MATERIAIS
+    MATERIAIS
    ========================================================== */
 export async function aprovarMaterial(materialId: number) {
   return apiFetch(`/api/materiais/${materialId}/aprovar/`, {
@@ -181,7 +181,7 @@ export async function reprovarMaterial(materialId: number, motivo: string) {
 }
 
 /* ==========================================================
-   🔹 DASHBOARD / ESTATÍSTICAS
+    DASHBOARD / ESTATÍSTICAS
    ========================================================== */
 export async function getDashboardStats() {
   return apiFetch("/api/stats/dashboard/");
@@ -192,7 +192,7 @@ export async function getStatsMensais() {
 }
 
 /* ==========================================================
-   🔹 MODELOS
+    MODELOS
    ========================================================== */
 export async function listarModelos() {
   return apiFetch("/api/modelos/");
@@ -223,12 +223,12 @@ export async function excluirModelo(id: number) {
 }
 
 /* ==========================================================
-   🔹 MARCAS DESCRIÇÃO
+    MARCAS DESCRIÇÃO
    ========================================================== */
 // api.ts - APENAS ESTAS PARTES MUDAM:
 
 /* ==========================================================
-   🔹 MARCAS DESCRIÇÃO
+    MARCAS DESCRIÇÃO
    ========================================================== */
 export interface MaterialMarca {
   id: number;
@@ -279,7 +279,7 @@ export async function salvarMarcaDescricao(data: MarcaFormData): Promise<any> {
   });
 }
 /* ==========================================================
-   🔹 AMBIENTES
+    AMBIENTES
    ========================================================== */
 
 // Interfaces para Ambientes
@@ -326,7 +326,7 @@ export async function listarAmbientes(): Promise<Ambiente[]> {
         ambientesDaPagina = response.data;
         nextPageUrl = response.next ? response.next.replace(/^.*\/\/[^/]+/, '') : null;
       } else {
-        console.warn("⚠️ Formato de resposta inesperado:", response);
+        console.warn(" Formato de resposta inesperado:", response);
         break;
       }
       
@@ -335,15 +335,15 @@ export async function listarAmbientes(): Promise<Ambiente[]> {
       
       // Limite de segurança
       if (todosAmbientes.length >= 1000) {
-        console.warn("⚠️ Limite de 1000 ambientes atingido");
+        console.warn(" Limite de 1000 ambientes atingido");
         break;
       }
     }
 
-    console.log("✅ Total de ambientes carregados:", todosAmbientes.length);
+    console.log(" Total de ambientes carregados:", todosAmbientes.length);
     return todosAmbientes;
   } catch (error) {
-    console.error("❌ Erro ao listar ambientes:", error);
+    console.error(" Erro ao listar ambientes:", error);
     return [];
   }
 }
@@ -361,7 +361,7 @@ export async function criarAmbiente(data: AmbienteFormData): Promise<Ambiente> {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    console.log('📤 Enviando POST para /api/ambientes/', data);
+    console.log(' Enviando POST para /api/ambientes/', data);
     
     const response = await fetch(`${BASE}/api/ambientes/`, {
       method: 'POST',
@@ -369,7 +369,7 @@ export async function criarAmbiente(data: AmbienteFormData): Promise<Ambiente> {
       body: JSON.stringify(data),
     });
 
-    console.log('📥 Resposta recebida:', response.status, response.statusText);
+    console.log(' Resposta recebida:', response.status, response.statusText);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -378,7 +378,7 @@ export async function criarAmbiente(data: AmbienteFormData): Promise<Ambiente> {
     }
 
     const result: Ambiente = await response.json();
-    console.log('✅ Ambiente criado com sucesso:', result);
+    console.log(' Ambiente criado com sucesso:', result);
     return result;
   } catch (error) {
     console.error('❌ Erro na função criarAmbiente:', error);
